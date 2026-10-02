@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS faces (
  match_score real
 );
 CREATE INDEX IF NOT EXISTS faces_image ON faces (image_id);
+CREATE INDEX IF NOT EXISTS faces_emb ON faces USING hnsw (emb vector_cosine_ops); -- clustering is a top-10 lookup per face
 ALTER TABLE faces ADD COLUMN IF NOT EXISTS cluster_id int; -- same person across the archive
 CREATE INDEX IF NOT EXISTS faces_cluster ON faces (cluster_id);
 
