@@ -12,7 +12,8 @@ against the description PLUS the people the index believes are in the photo, so 
  relevance = reranker(query, people + description) x P(each confidently named person is in the photo)
 Weakly linked words ("khan" in "khan market protest") stay plain words. One threshold on relevance.
 """
-import re, time
+import os as _os, re, time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as _Timeout
 from difflib import get_close_matches
 from .db import connect, flatten_vlm
 from .embed import embed_text
@@ -23,9 +24,23 @@ from .query_parse import parse as parse_query
 
 # Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
 TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
+PARSE_TIMEOUT_MS = int(_os.getenv("PARSE_TIMEOUT_MS", "700")) # uncached LLM parse takes ~2 s; past this we search without it
+_parse_pool = ThreadPoolExecutor(8)
+
+
+def parse_query_timed(q, timeout_ms):
+ """Cached parses return instantly. An uncached parse keeps running in the background (fills the cache) if it misses the deadline."""
+ fut = _parse_pool.submit(parse_query, q)
+ try:
+ return fut.result(timeout=timeout_ms / 1000)
+ except _Timeout:
+ return None
+ except Exception:
+ return None
+
+
 POOL = 50 # candidates per recall source
 MAX_RERANK = 150 # cap on candidates read by the reranker (latency)
-import os as _os
 # relevance needed to show an image, per stage-2 backend (sweeps 2026-10-02: eval/integrated_report.txt, eval/jev_batched_report.txt)
 REL_MIN = {"minilm": 0.50, "jev": 0.20}.get(_os.getenv("RERANK_BACKEND", "minilm"), 0.5)
 PERSON_MIN = 0.50 # belief a named person is in the image for it to count as "has the person"
@@ -144,7 +159,8 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  # the English rewrite is ADDED to the original words (never replaces them), expansions feed text recall only
  q_user, parsed, expansions = q, None, ""
  if parse:
- parsed = parse_query(q)
+ parsed = parse_query_timed(q, PARSE_TIMEOUT_MS)
+ if parsed:
  qn = " " + norm(q) + " "
  for pp in parsed.get("people") or []:
  sf, nm = norm(pp.get("surface", "")), pp.get("name", "")

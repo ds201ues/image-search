@@ -23,6 +23,8 @@ CRITERIA = {"true": "The photo clearly satisfies the whole search", "false": "So
 
 _lock = threading.Lock()
 _cache = None
+_session = requests.Session() # keep-alive: saves a TLS handshake per call
+_session.mount("https://", requests.adapters.HTTPAdapter(pool_connections=8, pool_maxsize=64))
 spent = {"usd": 0.0, "calls": 0, "tokens": 0, "ms": []}
 
 
@@ -56,7 +58,7 @@ def jev_one(q: str, doc: str, retries=4) -> float:
  hdr = {"Authorization": f"Bearer {os.environ['JEV_API_KEY']}", "Content-Type": "application/json"}
  for i in range(retries):
  t = time.perf_counter()
- r = requests.post(JEV_URL, json=body, headers=hdr, timeout=30)
+ r = _session.post(JEV_URL, json=body, headers=hdr, timeout=30)
  if r.status_code in (429, 529, 500, 502, 503):
  time.sleep(0.5 * 2 ** i); continue
  r.raise_for_status()
@@ -90,7 +92,7 @@ def jev_batch(q: str, docs: list[str], retries=4) -> list[float]:
  body = {"state": state, "model": JEV_MODEL, "questions": qs}
  for a in range(retries):
  t = time.perf_counter()
- r = requests.post(JEV_URL, json=body, headers=hdr, timeout=60)
+ r = _session.post(JEV_URL, json=body, headers=hdr, timeout=60)
  if r.status_code in (429, 529, 500, 502, 503):
  time.sleep(0.5 * 2 ** a); continue
  r.raise_for_status()
