@@ -308,6 +308,18 @@ shots), empty results count as P@10 = 0, known-item hit@k/MRR and 95% bootstrap 
 Per type (both tiers): place 0.79 (was 0.53), event_year 0.87 (was 0.42), hinglish 0.77, person 0.76. Zero-relevant queries in the pool 87→42.
 Live latency unchanged (~0.8–1.2 s warm; eval p50 93 ms only because every Jev score was cached).
 
+### Scale test: 33,759 photos (2026-10-02 evening) — eval/scale33k_report.txt
+Full pack minus the largest files (30 GB cap): 33,759 photos indexed (Luna via Batch API $5.70 for 28,757 new photos, i.e. $0.20/1k).
+Same 198 queries, same v2 judge.
+| | P@10 both tiers | R@pool | empty | junk/q | P@10 top tier | hit@1 | hit@10 | never retrieved | p50 ms |
+|---|---|---|---|---|---|---|---|---|---|
+| 5,002 photos | 0.78 | 0.90 | 6 | 0.15 | 0.81 | 0.70 | 0.92 | 7 | ~800 |
+| 33,759 photos | 0.79 [0.75–0.82] | 0.88 | 3 | 0.16 | 0.84 | 0.57 | 0.79 [0.72–0.85] | 17 | 878 (p95 1,240) |
+Precision and junk held at 6.7× the data while showing twice as many results per query (17 vs 9). Known-item rank fell as expected:
+the queries were written from one photo, and the bigger archive now holds several equally valid photos per query, so "the" source photo
+ranks lower; 17 source photos never enter the 150 candidates (recall ceiling to investigate per source). Latency stays near the 1 s target.
+People index at 33k: 78,970 faces, 2,886 clusters spanning 2+ photos (largest 221), 12,253 photos with a confident name (36%).
+
 ### Open
 1. Human check of the judge: 2 journalists × 300 pairs at /grade (pool built); real query log → next eval set.
 2. Reranker: Jev is stage 2; distillation into a local model (E11 plan) for vendor independence and latency (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.

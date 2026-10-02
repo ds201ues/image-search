@@ -1,0 +1,156 @@
+ judged 268/7937
+ judged 539/7937
+ judged 789/7937
+ judged 1053/7937
+ judged 1322/7937
+ judged 1581/7937
+ judged 1847/7937
+ judged 2104/7937
+ judged 2364/7937
+ judged 2614/7937
+ judged 2885/7937
+ judged 3149/7937
+ judged 3415/7937
+ judged 3682/7937
+ judged 3948/7937
+ judged 4212/7937
+ judged 4466/7937
+ judged 4738/7937
+ judged 4999/7937
+ judged 5260/7937
+ judged 5527/7937
+ judged 5783/7937
+ judged 6042/7937
+ judged 6302/7937
+ judged 6562/7937
+ judged 6813/7937
+ judged 7082/7937
+ judged 7340/7937
+ judged 7605/7937
+ judged 7860/7937
+judged pairs: 9469 (new judging cost $1.099 over 8062 calls)
+
+FULL SYSTEM, both tiers (relevance >= 0.1)
+type n P@10 R@pool empty junk/q shown
+person 19 0.80 0.85 1 0.21 24.5
+person_context 29 0.66 0.84 1 0.48 3.7
+scene 65 0.79 0.87 1 0.03 25.2
+attribute 19 0.84 0.91 0 0.11 22.6
+place 23 0.82 0.88 0 0.22 18.3
+event_year 27 0.83 0.90 0 0.11 3.4
+hinglish 16 0.76 0.89 0 0.12 16.1
+ALL 198 0.79 0.88 3 0.16 17.3 [P@10 95% 0.75-0.82]
+
+TOP TIER ONLY (relevance >= 0.5)
+type n P@10 R@pool empty junk/q shown
+person 19 0.88 0.72 2 0.00 21.8
+person_context 29 0.68 0.70 5 0.07 1.2
+scene 65 0.84 0.63 7 0.00 13.5
+attribute 19 0.92 0.61 0 0.00 6.2
+place 23 0.90 0.63 2 0.00 10.3
+event_year 27 0.87 0.70 2 0.00 1.3
+hinglish 16 0.74 0.54 3 0.00 3.4
+ALL 198 0.84 0.65 21 0.01 8.9 [P@10 95% 0.79-0.88]
+known-item (160 generated queries): hit@1 0.57 hit@5 0.72 hit@10 0.79 [95% 0.72-0.85] MRR 0.65 never retrieved 17
+ variant siglip P@10 0.51 R@pool 0.70 junk/q 2.44
+ variant desc P@10 0.54 R@pool 0.77 junk/q 2.17
+ variant fulltext P@10 0.46 R@pool 0.67 junk/q 3.11
+ variant no_rerank P@10 0.53 R@pool 0.92 junk/q 2.35
+
+latency ms (full): p50 878 p95 1240 max 1751
+
+threshold sweep (ALL):
+ >= 0.05: P@10 0.73 R@pool 0.94 empty 0 junk/q 0.44
+ >= 0.10: P@10 0.79 R@pool 0.88 empty 3 junk/q 0.16
+ >= 0.20: P@10 0.85 R@pool 0.83 empty 5 junk/q 0.07
+ >= 0.30: P@10 0.87 R@pool 0.79 empty 8 junk/q 0.04
+ >= 0.40: P@10 0.86 R@pool 0.72 empty 12 junk/q 0.03
+ >= 0.50: P@10 0.84 R@pool 0.65 empty 21 junk/q 0.01
+ >= 0.60: P@10 0.78 R@pool 0.56 empty 34 junk/q 0.01
+ >= 0.70: P@10 0.70 R@pool 0.47 empty 48 junk/q 0.01
+
+wrong results shown (grade 0) and relevant photos missed:
+ [person] 'urvashi rautela': 1 wrong shown, 0 relevant missed
+ [scene] 'woman seated at public event': 0 wrong shown, 24 relevant missed
+ [scene] 'golfer at tournament tee': 0 wrong shown, 1 relevant missed
+ [event_year] 'ahmedabad community clashes 2011': 1 wrong shown, 0 relevant missed
+ [hinglish] 'mumbai ki sunsaan sadak': 0 wrong shown, 2 relevant missed
+ [person_context] 'ollie pope batting for england': 0 wrong shown, 2 relevant missed
+ [scene] 'ganesh idol during pandemic': 0 wrong shown, 4 relevant missed
+ [place] 'taj hotel mumbai': 1 wrong shown, 0 relevant missed
+ [attribute] 'people removing posters from street': 0 wrong shown, 2 relevant missed
+ [scene] 'buildings under construction': 0 wrong shown, 7 relevant missed
+ [person] 'narendra modi': 0 wrong shown, 17 relevant missed
+ [scene] 'bollywood cast at film promotion': 0 wrong shown, 4 relevant missed
+ [scene] 'boys carrying scooter on street': 0 wrong shown, 1 relevant missed
+ [event_year] 'mumbai coastal road construction 2023': 0 wrong shown, 1 relevant missed
+ [scene] 'devotees at mahashivratri in mumbai': 1 wrong shown, 0 relevant missed
+ [attribute] 'man in orange kurta at podium': 0 wrong shown, 1 relevant missed
+ [place] 'bihar assembly patna': 0 wrong shown, 3 relevant missed
+ [hinglish] 'kumaraswamy party workers ko wave': 2 wrong shown, 0 relevant missed
+ [scene] 'footballer celebrating goal in premier league': 0 wrong shown, 1 relevant missed
+ [scene] 'devotees performing chhath puja': 0 wrong shown, 2 relevant missed
+ [attribute] 'street vendors selling mangoes': 0 wrong shown, 2 relevant missed
+ [attribute] 'man in blue jacket sunglasses': 0 wrong shown, 6 relevant missed
+ [person_context] 'priyanka chopra leaving event in car': 0 wrong shown, 1 relevant missed
+ [scene] 'man praying over mangoes at market': 0 wrong shown, 1 relevant missed
+ [event_year] 'srinagar disinfection drive 2020': 0 wrong shown, 1 relevant missed
+ [scene] 'press day programme at press club': 0 wrong shown, 3 relevant missed
+ [scene] 'man arriving at airport': 0 wrong shown, 6 relevant missed
+ [attribute] 'pink flowers in front of balcony': 1 wrong shown, 0 relevant missed
+ [place] 'taj palace new delhi': 1 wrong shown, 0 relevant missed
+ [event_year] 'daasyam dance performance 2017': 0 wrong shown, 1 relevant missed
+ [scene] 'workers spraying disinfectant on streets': 0 wrong shown, 1 relevant missed
+ [attribute] 'women wearing floral hats': 1 wrong shown, 1 relevant missed
+ [place] 'cmri hospital kolkata': 2 wrong shown, 2 relevant missed
+ [hinglish] 'backless gown wali actress': 0 wrong shown, 1 relevant missed
+ [scene] 'dog on a leash outdoors': 0 wrong shown, 1 relevant missed
+ [place] 'bengaluru auto rickshaw lane': 0 wrong shown, 16 relevant missed
+ [scene] 'man lying inside ornate building': 0 wrong shown, 1 relevant missed
+ [scene] 'men standing inside building entrance': 0 wrong shown, 6 relevant missed
+ [place] 'ncpa mumbai': 1 wrong shown, 1 relevant missed
+ [hinglish] 'corona workers in ppe suits': 0 wrong shown, 6 relevant missed
+ [person_context] 'abdul kalam inaugurates laboratory pune': 3 wrong shown, 0 relevant missed
+ [scene] 'children leaving school early': 0 wrong shown, 1 relevant missed
+ [scene] 'students cheering at college event': 0 wrong shown, 1 relevant missed
+ [event_year] 'celebrity family event 2023': 0 wrong shown, 1 relevant missed
+ [hinglish] 'bridal fashion week mein model': 0 wrong shown, 4 relevant missed
+ [scene] 'vinayaka idol market visakhapatnam': 0 wrong shown, 1 relevant missed
+ [event_year] 'dusty roads bangalore traffic 2009': 1 wrong shown, 0 relevant missed
+ [scene] 'politician addressing a press conference': 0 wrong shown, 6 relevant missed
+ [person_context] 'rahul gandhi at women’s rights event': 3 wrong shown, 0 relevant missed
+ [scene] 'actress posing at event': 0 wrong shown, 15 relevant missed
+ [event_year] 'bengaluru metro construction 2011': 1 wrong shown, 0 relevant missed
+ [scene] 'school children mid day meal': 0 wrong shown, 1 relevant missed
+ [attribute] 'people holding lit diyas at temple': 0 wrong shown, 2 relevant missed
+ [scene] 'security monitoring evm strong room': 0 wrong shown, 1 relevant missed
+ [scene] 'crowd waving saffron flags on stage': 0 wrong shown, 1 relevant missed
+ [scene] 'people buying flowers for gudi padwa': 1 wrong shown, 0 relevant missed
+ [person_context] 'lula supporters protest temer 2016': 1 wrong shown, 0 relevant missed
+ [attribute] 'woman in patterned dress at jewellery display': 0 wrong shown, 1 relevant missed
+ [hinglish] 'street art mela': 0 wrong shown, 1 relevant missed
+ [person_context] 'ys rajasekhara reddy industry meet': 1 wrong shown, 0 relevant missed
+ [event_year] 'old delhi traffic 2023': 0 wrong shown, 1 relevant missed
+ [person] 'rahul gandhi': 0 wrong shown, 8 relevant missed
+ [person] 'mamta': 0 wrong shown, 8 relevant missed
+ [person] 'farah': 1 wrong shown, 0 relevant missed
+ [person] 'priyanka gandi': 0 wrong shown, 2 relevant missed
+ [person_context] 'modi in pink jacket': 4 wrong shown, 1 relevant missed
+ [person_context] 'akhilesh speaking': 1 wrong shown, 0 relevant missed
+ [person_context] 'shubman gill celebrating': 1 wrong shown, 1 relevant missed
+ [scene] 'flood': 0 wrong shown, 15 relevant missed
+ [scene] 'parliament': 0 wrong shown, 21 relevant missed
+ [scene] 'cricket team celebrating': 0 wrong shown, 6 relevant missed
+ [scene] 'protest with flags on street': 0 wrong shown, 9 relevant missed
+ [scene] 'press conference with microphones': 0 wrong shown, 15 relevant missed
+ [scene] 'fire at night': 0 wrong shown, 1 relevant missed
+ [scene] 'politician addressing a rally': 0 wrong shown, 3 relevant missed
+ [attribute] 'man in pink turban': 0 wrong shown, 6 relevant missed
+ [place] 'airport': 0 wrong shown, 16 relevant missed
+ [place] 'high court': 0 wrong shown, 2 relevant missed
+ [place] 'stadium': 0 wrong shown, 4 relevant missed
+ [person] 'trump': 0 wrong shown, 3 relevant missed
+ [person] 'putin': 0 wrong shown, 2 relevant missed
+ [person] 'netanyahu': 0 wrong shown, 1 relevant missed
+ [person] 'imran khan': 1 wrong shown, 0 relevant missed
+ [person] 'shehbaz sharif': 1 wrong shown, 0 relevant missed

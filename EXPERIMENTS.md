@@ -102,4 +102,6 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  uncaptioned photos: Modi 76, Fadnavis 40, Kejriwal 39, Uddhav 34, Mamata 34. IMPLEMENTED in step_people: open-set margin rule
  (GALLERY_SIM 0.40 + GALLERY_MARGIN 0.15, or ≥ 0.55), caption-conditioned face assignment in multi-face photos (caption2 refs),
  reference outlier cleaning. Re-measure after the next people run.
+- SCALE 33k (2026-10-02): P@10 0.79 / R 0.88 / empty 3 / junk 0.16 (5k: 0.78 / 0.90 / 6 / 0.15); hit@1 0.57, hit@10 0.79, never retrieved 17
+ (5k: 0.70 / 0.92 / 7); p50 878 ms. Precision holds at 6.7× data; known-item rank drops because more valid photos exist. eval/scale33k_report.txt
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
