@@ -82,13 +82,12 @@ async function stats(){const s=await (await fetch('/api/stats')).json();
 function timing(r){const T=r.timings, total=T.total_ms||1;
  const bar=STAGES.filter(([k])=>T[k]!=null).map(([k,c])=>`<span title="${k} ${T[k]} ms" style="width:${100*T[k]/total}%;background:${c}"></span>`).join('');
  const leg=STAGES.filter(([k])=>T[k]!=null).map(([k,c,l])=>`<span><i style="background:${c}"></i>${l} ${T[k]}</span>`).join('');
- const parsed=(r.persons||[]).map(p=>`<span class="chip p">${esc(p)}</span>`).join('')+(r.persons_loose||[]).map(p=>`<span class="chip p" title="matched from one word, other results also shown">${esc(p)}?</span>`).join('')+((r.years||[])[0]?`<span class="chip">${r.years[0]}–${r.years[1]}</span>`:'');
+ const parsed=(r.persons||[]).map(p=>`<span class="chip ${p.p_link>=0.5?'p':''}" title="link ${Math.round(100*p.p_link)}%">${esc(p.name)}${p.p_link<0.5?'?':''}</span>`).join('')+((r.years||[])[0]?`<span class="chip">${r.years[0]}–${r.years[1]}</span>`:'');
  $('#mb').innerHTML=`<span><span class="time">${r.count}</span> results in <span class="time">${T.total_ms} ms</span>${T.server_ms?` (server ${T.server_ms} ms)`:''}</span>
  <span class="bar">${bar}</span><span class="legend">${leg}</span>${parsed?`<span class="parsed">understood: ${parsed}</span>`:''}`;}
 function grid(r){last=r;
  const notes=[];
- if((r.persons_ignored||[]).length) notes.push(`"${r.persons_ignored.map(esc).join(', ')}" has no photos, so the name was treated as an ordinary word.`);
- else if((r.persons_missing||[]).length) notes.push(`No photos recognised as ${r.persons_missing.map(esc).join(', ')} yet.`);
+ if((r.persons_missing||[]).length) notes.push(`No photos recognised as ${r.persons_missing.map(esc).join(', ')} yet.`);
  const note=notes.map(n=>`<div class="notice">${n}</div>`).join('');
  const chips=x=>x.people.map(p=>`<span class="chip p">${esc(p)}</span>`).join(' ')+(x.people_possible||[]).map(p=>`<span class="chip" title="possible match">${esc(p)}?</span>`).join(' ');
  $('#grid').innerHTML=note+(r.results.length?r.results.map((x,i)=>`<div class="card" data-i="${i}"><img loading="lazy" src="${x.thumb}" alt="">
@@ -108,7 +107,7 @@ function detail(x){const v=x.vlm||{};
  <dt>Described</dt><dd>${people}</dd><dt>Place</dt><dd>${esc([v.place_type,v.location_guess].filter(Boolean).join(' · ')||'—')}</dd>
  <dt>Event</dt><dd>${esc(v.event_type||'—')}</dd><dt>Activities</dt><dd>${list(v.activities)}</dd><dt>Objects</dt><dd>${list(v.objects)}</dd>
  <dt>Landmarks</dt><dd>${list(v.landmarks)}</dd><dt>Visible text</dt><dd>${list(v.visible_text)}</dd><dt>Colours</dt><dd>${list(v.dominant_colors)}</dd>
- <dt>Mood</dt><dd>${esc(v.mood||'—')}</dd><dt>Tags</dt><dd>${list(v.tags)}</dd><dt>Matched by</dt><dd>${list(x.why)}${x.p_ctx!=null?` · context ${Math.round(100*x.p_ctx)}%`:''}${x.p_person!=null?` · person ${Math.round(100*x.p_person)}%`:''}</dd>
+ <dt>Mood</dt><dd>${esc(v.mood||'—')}</dd><dt>Tags</dt><dd>${list(v.tags)}</dd><dt>Matched by</dt><dd>${list(x.why)}${x.p_ctx!=null?` · context ${Math.round(100*x.p_ctx)}%`:''}${x.p_person!=null?` · person ${Math.round(100*x.p_person)}%`:''} · relevance ${Math.round(100*x.relevance)}%</dd>
  <dt>Size</dt><dd>${x.width}×${x.height}</dd><dt>Model</dt><dd>${esc(x.vlm_model||'—')}</dd></dl>
  <div class="ref">Reference headline (not indexed): ${esc(x.ref_title||'—')}<br><a href="${x.source_url}" target="_blank" rel="noopener">source article</a> · ${esc(x.section||'')}</div>`;
  $('#side').classList.add('open');}

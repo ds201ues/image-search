@@ -34,4 +34,7 @@ Read PLAN.md first. It holds the agreed architecture, decisions, costs, phases a
 - A TLS-intercepting corporate proxy breaks Python `urllib` SSL. Use `requests` for downloads.
 - Wikimedia/Wikidata rate-limit bursts (HTTP 429) and the SPARQL endpoint times out on broad queries. Use `polite_get` in app/gallery.py and standard thumb widths (500).
 - Docker Desktop must be running for Postgres (`docker compose up -d`, port 5433).
+- Laptop CPU is a shared, heat-limited resource (10 cores, 16 GB). Heavy model work (bulk embedding, reranker scoring, training) goes to an
+ ephemeral GPU machine (a GPU machine, ephemeral GPU machine.
+ Terminate it when the batch is done.
 - AuraFace ONNX is exported with batch size 1; embed faces one at a time.

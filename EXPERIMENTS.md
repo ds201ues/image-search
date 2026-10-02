@@ -13,7 +13,10 @@ Hackathon mode: many ideas in parallel, measured the same way, keep what wins. B
 - Measure with `eval/run_eval.py` logic (judged P@10, R@pool, empty, junk/query, latency) on eval/gen_queries.jsonl
  + eval/hand_queries.txt. The judge cache (eval/judgments.jsonl, blind_people.jsonl) is shared and append-safe;
  never rewrite it. Report new judging cost.
-- CPU budget: 10 cores / 16 GB shared. Load at most one large local model per experiment; free it when done.
+- Compute: the laptop overheats under parallel model inference (load 57 seen). Rule: NO neural model inference on the laptop
+ beyond the live search path and single-process eval runs (torch threads ≤ 4, one model at a time). Anything heavier (embedding
+ 5k images, scoring thousands of reranker pairs, fine-tuning) runs on an ephemeral GPU machine. Jobs there are stateless: inputs rsynced up, npy/jsonl results
+ rsynced back and loaded into local exp_ tables. Terminate the machine when the batch is done.
 - Write results as: baseline row, your variant rows, per query type, plus 5 example queries that changed and why.
  State the recommendation in one line: adopt / drop / needs X.
 
