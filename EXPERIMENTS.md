@@ -69,7 +69,9 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
 - E4 image_embedding (source recall@50 only, GPU-embedded): siglip2-base 0.815; fg-clip2-base 0.783 (worse); siglip2-so400m 0.869 (+5.4, attribute 0.79→0.91,
  hinglish 0.72→0.81; ~6× CPU cost, dim 1152); PE-Core-L 0.861 (scene 0.91, place worse). Recall before the reranker is already 0.96 from the 4-source union,
  so the end-to-end gain is bounded; so400m is the only candidate worth a full eval later. exp/image_embedding/source_recall.json
-- E3 caption_aware_vlm (Luna pass done for 5,002 photos, $≈1.8; eval not run, agent cut off): photos with a ≥0.8 name 743→1,345 (+81%), 2,014 name guesses,
+- E3 caption_aware_vlm — EVALUATED 2026-10-02 with Jev stage 2 @0.2: P@10 0.67 / R 0.66 / empty 9 / junk 0.20 vs default 0.64 / 0.70 / 6 / 0.26: a wash within
+ judge noise; likely_queries (doc2query) added nothing; confident-name photos 1,689 vs 1,666 (caption names are already integrated via E2). NOT adopted:
+ keep the simpler image-only prompt. Option kept for later: the `caption_consistent` flag to down-weight caption names of people not visible. Earlier notes: photos with a ≥0.8 name 743→1,345 (+81%), 2,014 name guesses,
  caption_consistent=false on 45 photos (captions naming people not visible), likely_queries written for all. Needs the build+eval step. exp/caption_aware_vlm/vlm_cache.jsonl
 - E2 caption_people (extraction done, measurement not run): 3,435 captions → 1,931 canonical persons with aliases. exp/caption_people/{names.jsonl,persons.json}
 - E7 learned_fusion (cut off): only the dynamic-cutoff sweep landed: floor 0.3, ratio 0.5, k 0. No learned ranker trained.
@@ -78,4 +80,6 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  junk/q 0.53 vs baseline 0.59 / 0.48 / 26 / 0.36. Recall +13, empties −17, precision −4. Reranker is now the limiting stage. eval/integrated_report.txt
 - E11 decision_model (Jev as stage 2, live code app/decide.py): P@10 0.55→0.72, junk/q 0.53→0.14 at thr 0.5; dominates MiniLM at every threshold;
  hit@10 0.86; cost ≈$0.34 for the whole eval. Single-call latency 2.5 s; batched 50 docs/call: same quality, p50 811 ms → ADOPTED as default stage 2 (thr 0.2: P@10 0.64, R 0.70, empty 6, junk 0.26, hit@10 0.88). eval/jev_batched_report.txt, PLAN.md §12.
+- E12 jev_parse (2026-10-02): Jev cannot replace the Luna query parse (no text generation → no Hinglish rewrite, no canonical names). It classifies well:
+ city 99% and has-person 97% agreement with Luna, p50 516 ms, $0.05/1k queries. Keep the time-boxed Luna parse; use Jev for city if city ever becomes a boost. exp/jev_parse/
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

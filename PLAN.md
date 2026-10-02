@@ -294,8 +294,8 @@ candidates; $0.042/M input tokens, no output tokens). Single-call latency was p5
 the drop-in next backend once the account is enabled (403 on 2026-10-02).
 
 ### Open
-1. Reranker: replace with the decision model once latency is < 1 s (see above); distillation becomes optional (biggest precision lever). 2. Caption-aware Luna pass (E3: confident names 743→1,345 at index time) is
- cached in exp/caption_aware_vlm/vlm_cache.jsonl but not yet evaluated. 3. Learned fusion / dynamic cutoff (E7) not trained.
+1. Reranker: replace with the decision model once latency is < 1 s (see above); distillation becomes optional (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.
+3. Learned fusion / dynamic cutoff (E7) not trained. Query parse is time-boxed at 700 ms (uncached parse fills the cache in the background).
 4. Latency: 746 ms p50 with the 256-token reranker; keep under 1 s (consider 192 tokens or caching).
 
 ## 9. Sources
