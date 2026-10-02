@@ -90,4 +90,11 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  with margin ≥ 0.15 over the runner-up: 0.78 @0.4 (181 faces). Current thresholds (0.55 cluster / 0.45 gallery) are about right for THIS model; AuraFace's
  separation is the ceiling → benchmark a stronger commercially licensed model on the same reference pairs (research running). Face sizes fine (p50 183 px,
  2% < 48 px), so MIN_FACE is not the problem. exp/faces/measure.py
+ Pipeline checked: RGB input (current) beats BGR on clean same-person pairs (Mamata 0.40 vs 0.25), alignment is a similarity transform to the
+ ArcFace template, crops come from a 1280px decode of the original. Clean large frontal pairs (Ricciardo) reach only 0.49 → the model is modest.
+ Label noise is real: some caption-seeded "same person" pairs score 0.03 (the single detected face is not the named person).
+ Research (exp/research): no commercially clean open model beats AuraFace (AdaFace/InsightFace/EdgeFace/LVFace weights are research-only);
+ paid routes: InsightFace commercial licence (same architecture, ~4-6x fewer pose errors) or AWS Rekognition ($1 per 1k faces; RecognizeCelebrities
+ coverage of Indian figures untested). Free improvements: caption-conditioned naming (lower bar when the caption names the person), reference
+ cleaning (drop refs disagreeing with their person's other refs; min face 80 px; high det score), margin rule.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
