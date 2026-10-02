@@ -25,3 +25,5 @@ FACE_MATCH_THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.5"))
 TEXT_EMBED_MODEL = os.getenv("TEXT_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 TEXT_DIM = 384
 RERANK_MODEL = os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+RERANK_MAX_LEN = int(os.getenv("RERANK_MAX_LEN", "256"))
+QUERY_PARSE = os.getenv("QUERY_PARSE", "1") == "1" # LLM query understanding (cached); off = plain query

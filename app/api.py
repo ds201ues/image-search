@@ -18,9 +18,10 @@ def warm():
 
 @app.get("/api/search")
 def api_search(q: str, limit: int = 60, year_from: int | None = None, year_to: int | None = None,
- person: list[int] = Query(default=[])):
+ person: list[int] = Query(default=[]), parse: bool | None = None):
+ """parse: LLM query understanding (cached); None = config default, false = plain query."""
  t = time.perf_counter()
- r = S.search(q, limit, year_from, year_to, person, conn=conn)
+ r = S.search(q, limit, year_from, year_to, person, conn=conn, parse=parse)
  r["timings"]["server_ms"] = round((time.perf_counter() - t) * 1000, 1)
  return r
 

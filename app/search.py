@@ -17,12 +17,14 @@ from difflib import get_close_matches
 from .db import connect, flatten_vlm
 from .embed import embed_text
 from .text import embed_query, rerank
+from .config import QUERY_PARSE
+from .query_parse import parse as parse_query
 
 # Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
 TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
 POOL = 50 # candidates per recall source
 MAX_RERANK = 150 # cap on candidates read by the reranker (latency)
-REL_MIN = 0.20 # relevance needed to show an image (tune with eval/run_eval.py --sweep)
+REL_MIN = 0.50 # relevance needed to show an image; 0.5 from the 2026-10-02 sweep on the archive sample (eval/integrated_report.txt)
 PERSON_MIN = 0.50 # belief a named person is in the image for it to count as "has the person"
 PERSON_SURE = 0.80 # below this the UI marks the person as "possible"
 STOP = {"the", "a", "an", "in", "on", "at", "of", "and", "with", "to", "for", "is", "are", "image", "images",
@@ -125,14 +127,32 @@ def _date_sql(year_from, year_to):
 
 
 def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn=None,
- use=("vector", "desc", "text", "person", "rerank"), rel_min=None):
+ use=("vector", "desc", "text", "person", "rerank"), rel_min=None, parse=None):
  rel_min = REL_MIN if rel_min is None else rel_min
+ parse = QUERY_PARSE if parse is None else parse
  conn = conn or connect()
  T, t = {}, time.perf_counter()
 
  def lap(k):
  nonlocal t
  now = time.perf_counter(); T[k] = round((now - t) * 1000, 1); t = now
+
+ # ---- LLM query understanding (cached): canonical names replace nicknames/misspellings, years become a filter,
+ # the English rewrite is ADDED to the original words (never replaces them), expansions feed text recall only
+ q_user, parsed, expansions = q, None, ""
+ if parse:
+ parsed = parse_query(q)
+ qn = " " + norm(q) + " "
+ for pp in parsed.get("people") or []:
+ sf, nm = norm(pp.get("surface", "")), pp.get("name", "")
+ if sf and nm and f" {sf} " in qn:
+ qn = qn.replace(f" {sf} ", f" {norm(nm)} ", 1)
+ extra = [w for w in norm(parsed.get("search_text") or "").split() if w not in qn.split() and w not in STOP]
+ q = (qn.strip() + " " + " ".join(extra)).strip()
+ if parsed.get("year_from") and not (year_from or year_to):
+ year_from, year_to = parsed["year_from"], parsed.get("year_to") or parsed["year_from"]
+ expansions = " ".join(parsed.get("expansions") or [])
+ lap("parse_llm_ms")
 
  # ---- understand the query: possible people, years, the rest
  links, rest = people(conn).link(q)
@@ -172,19 +192,20 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  lap("people_ms")
 
  ctx = q_rr
+ ctx_text = (ctx + " " + expansions).strip() if expansions else ctx # synonyms help word matching, not the reranker
  if "vector" in use:
  qv = embed_text([ctx])[0]
  add("vector", [r[0] for r in conn.execute(
  f"SELECT id FROM {TABLES["images"]} i WHERE clip IS NOT NULL {dsql} ORDER BY clip <=> %s LIMIT {POOL}", (*dargs, qv))])
  if "desc" in use:
- dv = embed_query(ctx)
+ dv = embed_query(ctx_text)
  add("desc", [r[0] for r in conn.execute(
  f"SELECT id FROM {TABLES["images"]} i WHERE desc_emb IS NOT NULL {dsql} ORDER BY desc_emb <=> %s LIMIT {POOL}", (*dargs, dv))])
  if "text" in use:
  add("text", [r[0] for r in conn.execute(f"""
  WITH q AS (SELECT to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', %s)), ' | ')) q)
  SELECT id FROM {TABLES["images"]} i, q WHERE q.q IS NOT NULL AND tsv @@ q.q {dsql}
- ORDER BY ts_rank_cd(tsv, q.q, 32) DESC LIMIT {POOL}""", (ctx, *dargs))])
+ ORDER BY ts_rank_cd(tsv, q.q, 32) DESC LIMIT {POOL}""", (ctx_text, *dargs))])
  lap("recall_ms")
 
  # ---- stage 2: precision
@@ -226,7 +247,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  names = people(conn).names
  present = {p for (p,) in conn.execute(f"SELECT DISTINCT person_id FROM {TABLES["scores"]} WHERE person_id = ANY(%s) AND score >= %s",
  (pids, PERSON_MIN))} if pids else set()
- return {"query": q,
+ return {"query": q_user, "query_used": q, "parsed": parsed,
  "persons": [{"name": names[p], "p_link": round(c, 2), "words": w} for p, c, w in links],
  "persons_missing": [names[p] for p in pids if p not in present],
  "required": [names[p] for p, _, _ in strong], "reranked_as": ctx,

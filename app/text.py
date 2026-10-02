@@ -4,7 +4,7 @@
 """
 import threading
 import numpy as np
-from .config import TEXT_EMBED_MODEL, RERANK_MODEL
+from .config import TEXT_EMBED_MODEL, RERANK_MODEL, RERANK_MAX_LEN
 
 _lock = threading.Lock()
 _emb = _rr = None
@@ -25,7 +25,7 @@ def _load_rr():
  with _lock:
  if _rr is None:
  from sentence_transformers import CrossEncoder
- _rr = CrossEncoder(RERANK_MODEL, max_length=160, device="cpu") # 160 tokens: half the time, scores corr 0.999 vs 256
+ _rr = CrossEncoder(RERANK_MODEL, max_length=RERANK_MAX_LEN, device="cpu") # 256 so the caption + description both fit
  return _rr
 
 
@@ -44,10 +44,12 @@ def rerank(q: str, docs: list[str]) -> np.ndarray:
  return 1 / (1 + np.exp(-np.asarray(logits, dtype=np.float32)))
 
 
-def doc_text(v: dict | None) -> str:
- """What the reranker and description embedding read. Names are excluded: people are scored separately."""
- if not v:
+def doc_text(v: dict | None, caption: str | None = None) -> str:
+ """What the reranker and description embedding read: photographer caption first (who/where/what), then the VLM description."""
+ if not v and not caption:
  return ""
+ v = v or {}
+ cap = f"Caption: {' '.join(caption.split())}. " if caption else ""
  people = "; ".join(", ".join(x for x in (p.get("description"), p.get("clothing"), p.get("action")) if x)
  for p in v.get("people") or [])
  parts = [v.get("summary", ""),
@@ -59,4 +61,4 @@ def doc_text(v: dict | None) -> str:
  f"Landmarks: {', '.join(v.get('landmarks') or [])}." if v.get("landmarks") else "",
  f"Text in image: {', '.join(v.get('visible_text') or [])}." if v.get("visible_text") else "",
  f"Type: {v.get('image_type', '')}."]
- return " ".join(p for p in parts if p.strip())
+ return cap + " ".join(p for p in parts if p.strip())

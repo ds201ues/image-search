@@ -250,6 +250,37 @@ Biggest remaining loss: the small reranker scores some relevant scene/place phot
 | v2 full system | 0.89 | 0.83 | 0.08 |
 Remaining misses are reranker recall (stadium, airport) — next: compare a larger reranker on the 1,100 set.
 
+## 12. Archive sample: baseline, experiments and the integrated system (2026-10-02)
+
+Data: 5,002-file stratified sample of the larger archive. Eval: 198 queries (160 Luna-written from image+caption, 38 hand), ~14.7k judged pairs.
+Experiments and findings: EXPERIMENTS.md (results log) and exp/*/results.md. Research notes: exp/research/README.md.
+
+### Integrated system = baseline + captions everywhere + caption names + cached LLM query parse
+| | P@10 | R@pool | empty | junk/q | p50 ms |
+|---|---|---|---|---|---|
+| baseline (no captions, no parse), thr 0.2 | 0.59 | 0.48 | 26 | 0.36 | ~400 (160-token reranker) |
+| integrated, thr 0.2 | 0.53 | 0.64 | 3 | 0.70 | 746 |
+| **integrated, thr 0.5 (chosen)** | 0.55 | 0.61 | 9 | 0.53 | 746 |
+Per type (thr 0.2): person_context recall 0.57→0.77, scene 0.62→0.71, event_year 0.00→0.50, hinglish 0.09→0.35; place P@10 0.64→0.43 (worse).
+People index: photos with a confident name 549→1,666 (caption names 2,392 rows, 478 caption-seeded reference faces, cluster votes 340→917).
+
+### What the numbers say
+- Recall and empties improved a lot; precision fell. The reranker (ms-marco MiniLM-L6) is now the limiting stage: with caption text in the
+ document it over-scores loose matches (city names, "meeting room" for "high court" at 0.95). E5 measured AUC 0.84 for MiniLM vs 0.89 for
+ bge-reranker-v2-m3 / mxbai-large on the same pairs, and captions help every model. Fixing this needs a bigger reranker (GPU or hosted,
+ ~$0.8 per 1k queries) or distilling the judge into a small one (E12, not run).
+- Query parse: adopt names/years/Hinglish rewrite (added to the original words, never replacing them); city only as a boost (62% coverage).
+ Uncached parse is 2.2 s, so it is cached per query (data/query_parses.jsonl) and can be switched off (QUERY_PARSE=0, `parse=false`).
+- Image model: siglip2-so400m is the only candidate worth a full eval later (+5 source recall, 6× CPU); fg-clip2 is worse; recall before
+ the reranker is already ~0.9–0.96 so the end-to-end gain is bounded.
+- Dedup: no near-duplicates in a 10% sample; re-check on the full pack. Luna cost: Batch API halves it ($0.20/1k); compact schema $0.24/1k.
+- Heat: parallel local model inference overheated the laptop; heavy work moved to an ephemeral GPU machine, ~3.4 h.
+
+### Open
+1. Reranker upgrade or distillation (biggest precision lever). 2. Caption-aware Luna pass (E3: confident names 743→1,345 at index time) is
+ cached in exp/caption_aware_vlm/vlm_cache.jsonl but not yet evaluated. 3. Learned fusion / dynamic cutoff (E7) not trained.
+4. Latency: 746 ms p50 with the 256-token reranker; keep under 1 s (consider 192 tokens or caching).
+
 ## 9. Sources
 
 - AP AI photo library search: https://photoarchivenews.com/news/launched-ap-powers-up-ai-for-full-photo-library-search/

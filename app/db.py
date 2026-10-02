@@ -121,9 +121,16 @@ def flatten_vlm(v: dict | None) -> str:
  return " ".join(x for x in parts if x)
 
 
+def caption_text(caption, headline, keywords, city, state) -> str:
+ """Photographer metadata as searchable text (names included: the caption is evidence of who is there)."""
+ return " ".join(x for x in [caption or "", headline or "", " ".join(keywords or []), city or "", state or ""] if x)
+
+
 def rebuild_search_text(conn, image_id: str | None = None):
- """search_text = flattened VLM description. People are searched through image_person_scores, not text."""
+ """search_text = flattened VLM description + photographer caption fields. People are ranked through image_person_scores."""
  where = "WHERE id = %s" if image_id else ""
- rows = conn.execute(f"SELECT id, vlm FROM images {where}", (image_id,) if image_id else ()).fetchall()
+ rows = conn.execute(f"SELECT id, vlm, caption, headline, keywords, city, state FROM images {where}",
+ (image_id,) if image_id else ()).fetchall()
  with conn.cursor() as cur:
- cur.executemany("UPDATE images SET search_text = %s WHERE id = %s", [(flatten_vlm(v), i) for i, v in rows])
+ cur.executemany("UPDATE images SET search_text = %s WHERE id = %s",
+ [((flatten_vlm(v) + " " + caption_text(c, h, k, ci, st)).strip(), i) for i, v, c, h, k, ci, st in rows])

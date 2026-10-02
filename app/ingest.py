@@ -165,6 +165,8 @@ def step_vlm(conn, workers=8):
 
 
 VLM_MIN_CONF = 0.3 # Luna guesses below this are noise; everything above is kept as evidence
+CAPTION_WEIGHT = 0.9 # a caption naming someone is strong evidence, not proof (people get cropped out, named as context)
+CAPTION_REF_CONF = 0.8 # single-face photo + one caption name at this confidence -> reference face for that person
 CLUSTER_SIM = 0.55 # AuraFace cosine for "same person" when grouping faces
 GALLERY_SIM = 0.45 # a face this close to a gallery reference counts as a vote
 
@@ -172,15 +174,15 @@ GALLERY_SIM = 0.45 # a face this close to a gallery reference counts as a vote
 def step_text(conn, batch=64):
  """Reranker text + description-meaning vector for every described image."""
  from .text import doc_text, embed_docs
- todo = conn.execute("SELECT id, vlm FROM images WHERE vlm IS NOT NULL AND desc_emb IS NULL").fetchall()
+ todo = conn.execute("SELECT id, vlm, caption FROM images WHERE (vlm IS NOT NULL OR caption IS NOT NULL) AND desc_emb IS NULL").fetchall()
  def run():
  for i in range(0, len(todo), batch):
  chunk = todo[i:i + batch]
- docs = [doc_text(v) for _, v in chunk]
+ docs = [doc_text(v, c) for _, v, c in chunk]
  vecs = embed_docs(docs)
  with conn.cursor() as cur:
  cur.executemany("UPDATE images SET doc_text = %s, desc_emb = %s WHERE id = %s",
- [(d, e, iid) for (iid, _), d, e in zip(chunk, docs, vecs)])
+ [(d, e, iid) for (iid, _, _), d, e in zip(chunk, docs, vecs)])
  return todo, run
 
 
@@ -203,7 +205,8 @@ def _clusters(conn):
 
 def step_people(conn):
  """Who is in each image, as evidence with confidence (decided at query time, not here).
- 1. Luna guesses -> image_persons(source='vlm')
+ 1. Luna guesses -> image_persons(source='vlm'); caption names -> image_persons(source='caption')
+ single-face photos with one confident caption name seed person_refs (gallery votes for the clusters)
  2. face clusters -> faces.cluster_id
  3. cluster votes -> image_persons(source='cluster'): what the OTHER photos of this face say
  (Luna names weighted by 1/faces-in-photo, plus gallery matches), leave-one-out so a guess
@@ -224,6 +227,32 @@ def step_people(conn):
  with conn.cursor() as cur:
  cur.executemany("INSERT INTO image_persons VALUES (%s, %s, 'vlm', %s)",
  [(i, p, c) for i, d in vlm.items() for p, c in d.items()])
+
+ # caption names: evidence + reference faces
+ from .caption_names import extract, spent as cap_spent
+ cap_rows = conn.execute("SELECT id, caption, headline FROM images WHERE caption IS NOT NULL OR headline IS NOT NULL").fetchall()
+ capn = extract(cap_rows)
+ cap_pid = {}
+ for iid, ppl in capn.items():
+ for name, conf in ppl:
+ name = " ".join(name.split())
+ pid = conn.execute("""INSERT INTO persons (name) VALUES (%s) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+ RETURNING id""", (name,)).fetchone()[0]
+ cap_pid.setdefault(iid, {})[pid] = max(conf, cap_pid.get(iid, {}).get(pid, 0))
+ with conn.cursor() as cur:
+ cur.executemany("INSERT INTO image_persons VALUES (%s, %s, 'caption', %s) ON CONFLICT DO NOTHING",
+ [(i, p, round(CAPTION_WEIGHT * c, 3)) for i, d in cap_pid.items() for p, c in d.items()])
+ cur.execute("DELETE FROM person_refs WHERE source LIKE 'caption:%'")
+ cur.execute("""INSERT INTO person_refs (person_id, emb, source)
+ SELECT ip.person_id, f.emb, 'caption:' || f.image_id
+ FROM image_persons ip JOIN faces f ON f.image_id = ip.image_id
+ WHERE ip.source = 'caption' AND ip.score >= %s
+ AND (SELECT count(*) FROM faces g WHERE g.image_id = ip.image_id) = 1
+ AND (SELECT count(*) FROM image_persons j WHERE j.image_id = ip.image_id AND j.source = 'caption') = 1""",
+ (CAPTION_WEIGHT * CAPTION_REF_CONF,))
+ nrefs = conn.execute("SELECT count(*) FROM person_refs WHERE source LIKE 'caption:%'").fetchone()[0]
+ print(f" captions: {len(capn)} photos name someone ({sum(len(v) for v in capn.values())} names, "
+ f"${cap_spent['usd']:.3f} new extraction), {nrefs} reference faces seeded")
 
  cl = _clusters(conn)
  with conn.cursor() as cur:

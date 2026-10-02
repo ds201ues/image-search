@@ -73,4 +73,7 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  caption_consistent=false on 45 photos (captions naming people not visible), likely_queries written for all. Needs the build+eval step. exp/caption_aware_vlm/vlm_cache.jsonl
 - E2 caption_people (extraction done, measurement not run): 3,435 captions → 1,931 canonical persons with aliases. exp/caption_people/{names.jsonl,persons.json}
 - E7 learned_fusion (cut off): only the dynamic-cutoff sweep landed: floor 0.3, ratio 0.5, k 0. No learned ranker trained.
+- INTEGRATION (2026-10-02, live code): captions in search_text + desc vector + reranker doc (256 tokens), caption names → image_persons(source='caption')
+ + caption-seeded person_refs, cached LLM query parse (names/years/rewrite/expansions; city unused). Result @thr 0.5: P@10 0.55, R@pool 0.61, empty 9,
+ junk/q 0.53 vs baseline 0.59 / 0.48 / 26 / 0.36. Recall +13, empties −17, precision −4. Reranker is now the limiting stage. eval/integrated_report.txt
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
