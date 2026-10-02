@@ -284,10 +284,13 @@ Stage 2 = one Noul question per (query, caption+description) to Jev (`app/decide
 | Jev | 0.5 | **0.72** | 0.55 | 13 | **0.14** | 0.61 | 0.86 | 2468 |
 | Jev | 0.2 | 0.63 | 0.67 | 6 | 0.30 | | | |
 | Jev | 0.1 | 0.60 | 0.79 | 2 | 0.47 | | | |
+| **Jev batched, 50 docs/call (chosen), thr 0.2** | 0.2 | 0.64 | 0.70 | 6 | 0.26 | **0.64** | **0.88** | **811** |
+| Jev batched | 0.5 | 0.68 | 0.51 | 16 | 0.15 | 0.64 | 0.88 | 811 |
+Batched judging keeps quality (same curve as single calls) and meets the latency target (p50 811 ms, p95 966 ms). Default now:
+RERANK_BACKEND=jev, JEV_BATCH=50, REL_MIN 0.2 for Jev (0.5 for MiniLM). Total Jev spend for all evals ≈ $0.62.
 Jev dominates MiniLM at every threshold (at 0.2 it beats MiniLM@0.5 on all four metrics). person_context P@10 0.43→0.79, scene 0.61→0.76,
 attribute 0.58→0.86. Scores are decisive: 91% of pairs ≤ 0.1, 2.8% ≥ 0.5. Cost: ~20k calls, ≈$0.34 total (≈$0.0017 per query at 150
-candidates; $0.042/M input tokens, no output tokens). Blocker: latency p50 2.5 s (150 sequential-ish calls at ~500 ms each, 24 workers) → cut
-candidates to ~40 after fusion, batch several documents per call, raise concurrency; target < 1 s. OpenAI Decisions API (image-capable) is
+candidates; $0.042/M input tokens, no output tokens). Single-call latency was p50 2.5 s (150 calls at ~500 ms); batching 50 documents per call fixed it (latency is per call, not per token). OpenAI Decisions API (image-capable) is
 the drop-in next backend once the account is enabled (403 on 2026-10-02).
 
 ### Open

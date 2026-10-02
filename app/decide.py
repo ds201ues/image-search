@@ -14,7 +14,8 @@ JEV_MODEL = os.getenv("JEV_MODEL", "jev-latest")
 JEV_PRICE_IN = 0.042 / 1e6 # USD per input token (output is free)
 JEV_BUDGET_USD = float(os.getenv("JEV_BUDGET_USD", "2.0"))
 JEV_WORKERS = int(os.getenv("JEV_WORKERS", "16"))
-CACHE = DATA_DIR / "jev_cache.jsonl"
+JEV_BATCH = int(os.getenv("JEV_BATCH", "50")) # documents per call; latency is per call (~0.5-0.7 s), not per token
+CACHE = DATA_DIR / ("jev_cache_batched.jsonl" if JEV_BATCH > 1 else "jev_cache.jsonl")
 INSTRUCTIONS = ('A journalist searched a newspaper photo archive for: "{q}"\n'
  "The state is the photographer's caption and a description of one photo. Does this photo satisfy that search? "
  "Every requested person, place, event, object or attribute must be present; a named person must be in the photo.")
@@ -71,9 +72,48 @@ def jev_one(q: str, doc: str, retries=4) -> float:
  raise RuntimeError(f"Jev: gave up after {retries} retries (last status {r.status_code})")
 
 
+def jev_batch(q: str, docs: list[str], retries=4) -> list[float]:
+ """One call: N documents in the state, N Noul questions, each told which photo to judge. Cached per pair."""
+ c = _load()
+ keys = [_key(q, d) for d in docs]
+ out = [c.get(k) for k in keys]
+ todo = [i for i, v in enumerate(out) if v is None]
+ if not todo:
+ return out
+ if spent["usd"] >= JEV_BUDGET_USD:
+ raise RuntimeError(f"Jev budget cap ${JEV_BUDGET_USD} reached")
+ state = {f"photo_{j}": docs[i][:1500] for j, i in enumerate(todo)}
+ ask = INSTRUCTIONS.format(q=q).replace("The state is the photographer's caption and a description of one photo",
+ "The state holds several photos (caption + description each); judge ONLY {pid}")
+ qs = {f"rel_{j}": {"type": "noul", "instructions": ask.format(pid=f"photo_{j}"), "criteria": CRITERIA} for j in range(len(todo))}
+ hdr = {"Authorization": f"Bearer {os.environ['JEV_API_KEY']}", "Content-Type": "application/json"}
+ body = {"state": state, "model": JEV_MODEL, "questions": qs}
+ for a in range(retries):
+ t = time.perf_counter()
+ r = requests.post(JEV_URL, json=body, headers=hdr, timeout=60)
+ if r.status_code in (429, 529, 500, 502, 503):
+ time.sleep(0.5 * 2 ** a); continue
+ r.raise_for_status()
+ res = r.json()
+ with _lock:
+ spent["calls"] += 1; spent["ms"].append((time.perf_counter() - t) * 1000)
+ tok = res.get("usage", {}).get("input_tokens", 0); spent["tokens"] += tok; spent["usd"] += tok * JEV_PRICE_IN
+ with CACHE.open("a") as f:
+ for j, i in enumerate(todo):
+ p = float(res["answers"][f"rel_{j}"]["noul"]); out[i] = p; c[keys[i]] = p
+ f.write(json.dumps({"k": keys[i], "p": p}) + "\n")
+ return out
+ raise RuntimeError(f"Jev: gave up after {retries} retries (last status {r.status_code})")
+
+
 def rerank_jev(q: str, docs: list[str]) -> np.ndarray:
  if not docs:
  return np.zeros(0)
+ if JEV_BATCH > 1:
+ chunks = [docs[i:i + JEV_BATCH] for i in range(0, len(docs), JEV_BATCH)]
+ with ThreadPoolExecutor(len(chunks)) as ex:
+ parts = list(ex.map(lambda ch: jev_batch(q, ch), chunks))
+ return np.asarray([p for part in parts for p in part], dtype=np.float32)
  with ThreadPoolExecutor(JEV_WORKERS) as ex:
  return np.asarray(list(ex.map(lambda d: jev_one(q, d), docs)), dtype=np.float32)
 

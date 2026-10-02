@@ -77,5 +77,5 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  + caption-seeded person_refs, cached LLM query parse (names/years/rewrite/expansions; city unused). Result @thr 0.5: P@10 0.55, R@pool 0.61, empty 9,
  junk/q 0.53 vs baseline 0.59 / 0.48 / 26 / 0.36. Recall +13, empties −17, precision −4. Reranker is now the limiting stage. eval/integrated_report.txt
 - E11 decision_model (Jev as stage 2, live code app/decide.py): P@10 0.55→0.72, junk/q 0.53→0.14 at thr 0.5; dominates MiniLM at every threshold;
- hit@10 0.86; cost ≈$0.34 for the whole eval. Latency p50 2.5 s is the blocker (150 calls × ~500 ms). eval/jev_report.txt, PLAN.md §12.
+ hit@10 0.86; cost ≈$0.34 for the whole eval. Single-call latency 2.5 s; batched 50 docs/call: same quality, p50 811 ms → ADOPTED as default stage 2 (thr 0.2: P@10 0.64, R 0.70, empty 6, junk 0.26, hit@10 0.88). eval/jev_batched_report.txt, PLAN.md §12.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

@@ -1,0 +1,121 @@
+judged pairs: 5774 (new judging cost $0.022 over 168 calls)
+
+FULL SYSTEM (relevance threshold 0.5)
+type n P@10 R@pool empty junk/q shown
+person 19 0.88 0.58 2 0.37 4.1
+person_context 29 0.72 0.67 3 0.14 0.6
+scene 65 0.73 0.55 4 0.02 6.6
+attribute 19 0.81 0.44 2 0.11 2.3
+place 23 0.53 0.34 2 0.43 6.5
+event_year 27 0.42 0.50 1 0.15 0.8
+hinglish 16 0.57 0.24 2 0.12 1.0
+ALL 198 0.68 0.51 16 0.15 3.8
+ variant siglip P@10 0.44 R@pool 0.66 junk/q 2.13
+ variant desc P@10 0.42 R@pool 0.56 junk/q 2.44
+ variant fulltext P@10 0.39 R@pool 0.50 junk/q 2.80
+ variant no_rerank P@10 0.44 R@pool 0.78 junk/q 2.22
+
+latency ms (full): p50 811 p95 966 max 1125
+
+threshold sweep (ALL):
+ >= 0.05: P@10 0.59 R@pool 0.84 empty 2 junk/q 0.55
+ >= 0.10: P@10 0.62 R@pool 0.76 empty 5 junk/q 0.33
+ >= 0.20: P@10 0.64 R@pool 0.70 empty 6 junk/q 0.26
+ >= 0.30: P@10 0.65 R@pool 0.66 empty 9 junk/q 0.23
+ >= 0.40: P@10 0.67 R@pool 0.58 empty 12 junk/q 0.19
+ >= 0.50: P@10 0.68 R@pool 0.51 empty 16 junk/q 0.15
+ >= 0.60: P@10 0.70 R@pool 0.46 empty 23 junk/q 0.11
+ >= 0.70: P@10 0.72 R@pool 0.39 empty 30 junk/q 0.09
+
+wrong results shown (grade 0) and relevant photos missed:
+ [scene] 'sportsaid athletes with duchess of cambridge 2016': 0 wrong shown, 1 relevant missed
+ [attribute] 'man in blue shirt at bara imambara': 0 wrong shown, 1 relevant missed
+ [place] 'factory accident in bengaluru': 1 wrong shown, 0 relevant missed
+ [scene] 'woman seated at public event': 0 wrong shown, 5 relevant missed
+ [event_year] 'students watch mars mission 2014': 1 wrong shown, 0 relevant missed
+ [attribute] 'golf winners holding trophies': 0 wrong shown, 2 relevant missed
+ [scene] 'ganesh idol during pandemic': 0 wrong shown, 4 relevant missed
+ [place] 'taj hotel mumbai': 1 wrong shown, 0 relevant missed
+ [scene] 'people waiting at vaccination centre': 0 wrong shown, 1 relevant missed
+ [scene] 'actress accepting award on stage': 0 wrong shown, 1 relevant missed
+ [attribute] 'people removing posters from street': 0 wrong shown, 4 relevant missed
+ [place] 'garmisch partenkirchen germany': 0 wrong shown, 1 relevant missed
+ [scene] 'buildings under construction': 0 wrong shown, 2 relevant missed
+ [person_context] 'manohar lal khattar inaugurating sports activities': 0 wrong shown, 1 relevant missed
+ [place] 'film premiere in mumbai': 0 wrong shown, 2 relevant missed
+ [hinglish] 'actor car se utarte hue': 0 wrong shown, 8 relevant missed
+ [scene] 'bollywood cast at film promotion': 0 wrong shown, 8 relevant missed
+ [person] 'k radhakrishnan': 0 wrong shown, 8 relevant missed
+ [scene] 'boys carrying scooter on street': 0 wrong shown, 1 relevant missed
+ [scene] 'tree plantation drive': 0 wrong shown, 4 relevant missed
+ [hinglish] 'neha tripathi golf 2013': 1 wrong shown, 0 relevant missed
+ [attribute] 'man in orange kurta at podium': 0 wrong shown, 1 relevant missed
+ [place] 'bihar assembly patna': 2 wrong shown, 5 relevant missed
+ [scene] 'devotees performing chhath puja': 0 wrong shown, 2 relevant missed
+ [person_context] 'rabri devi misa bharti election certificates': 1 wrong shown, 0 relevant missed
+ [scene] 'menswear fashion show runway': 0 wrong shown, 6 relevant missed
+ [attribute] 'street vendors selling mangoes': 0 wrong shown, 2 relevant missed
+ [event_year] 'vatal nagaraj protest 2008': 1 wrong shown, 0 relevant missed
+ [attribute] 'man in blue jacket sunglasses': 0 wrong shown, 6 relevant missed
+ [scene] 'man arriving at airport': 0 wrong shown, 6 relevant missed
+ [attribute] 'pink flowers in front of balcony': 0 wrong shown, 1 relevant missed
+ [hinglish] 'bollywood actresses stage par': 0 wrong shown, 6 relevant missed
+ [scene] 'homeless people living on streets': 0 wrong shown, 2 relevant missed
+ [scene] 'literature festival panel discussion': 0 wrong shown, 1 relevant missed
+ [attribute] 'women wearing floral hats': 0 wrong shown, 2 relevant missed
+ [place] 'cmri hospital kolkata': 0 wrong shown, 1 relevant missed
+ [hinglish] 'backless gown wali actress': 0 wrong shown, 1 relevant missed
+ [scene] 'dog on a leash outdoors': 0 wrong shown, 5 relevant missed
+ [place] 'bengaluru auto rickshaw lane': 0 wrong shown, 2 relevant missed
+ [scene] 'man lying inside ornate building': 0 wrong shown, 1 relevant missed
+ [scene] 'men standing inside building entrance': 0 wrong shown, 15 relevant missed
+ [attribute] 'protesters wearing politician masks': 0 wrong shown, 1 relevant missed
+ [hinglish] 'corona workers in ppe suits': 0 wrong shown, 3 relevant missed
+ [scene] 'students cheering at college event': 0 wrong shown, 5 relevant missed
+ [attribute] 'asha parekh orange saree': 2 wrong shown, 0 relevant missed
+ [hinglish] 'bridal fashion week mein model': 0 wrong shown, 4 relevant missed
+ [scene] 'student packing suitcase in hostel': 0 wrong shown, 1 relevant missed
+ [scene] 'politician addressing a press conference': 0 wrong shown, 3 relevant missed
+ [place] 'chandigarh capitol complex at night': 0 wrong shown, 2 relevant missed
+ [place] 'bandra mumbai': 3 wrong shown, 4 relevant missed
+ [event_year] 'cara delevingne cannes party 2015': 1 wrong shown, 0 relevant missed
+ [person_context] 'rahul gandhi at women’s rights event': 1 wrong shown, 0 relevant missed
+ [scene] 'actress posing at event': 0 wrong shown, 15 relevant missed
+ [person] 'rahul sood': 0 wrong shown, 2 relevant missed
+ [scene] 'school children mid day meal': 0 wrong shown, 2 relevant missed
+ [scene] 'crowd waving saffron flags on stage': 0 wrong shown, 1 relevant missed
+ [scene] 'easter rising centenary flypast dublin': 0 wrong shown, 1 relevant missed
+ [person_context] 'lula supporters protest temer 2016': 1 wrong shown, 0 relevant missed
+ [attribute] 'woman in patterned dress at jewellery display': 0 wrong shown, 7 relevant missed
+ [hinglish] 'street art mela': 0 wrong shown, 1 relevant missed
+ [scene] 'woman being presented with bouquet': 0 wrong shown, 1 relevant missed
+ [event_year] 'formula one screening mumbai 2007': 1 wrong shown, 0 relevant missed
+ [person_context] 'ys rajasekhara reddy industry meet': 0 wrong shown, 1 relevant missed
+ [place] 'ma chidambaram stadium chennai': 1 wrong shown, 0 relevant missed
+ [event_year] 'old delhi traffic 2023': 0 wrong shown, 1 relevant missed
+ [hinglish] 'sanjay tandon rally chandigarh': 1 wrong shown, 0 relevant missed
+ [person] 'rahul gandhi': 0 wrong shown, 3 relevant missed
+ [person] 'mamta': 0 wrong shown, 3 relevant missed
+ [person] 'farah': 0 wrong shown, 16 relevant missed
+ [person] 'akhilesh': 1 wrong shown, 1 relevant missed
+ [person] 'kohli': 3 wrong shown, 3 relevant missed
+ [person_context] 'modi in pink jacket': 0 wrong shown, 1 relevant missed
+ [person_context] 'akhilesh speaking': 0 wrong shown, 2 relevant missed
+ [person_context] 'shubman gill celebrating': 0 wrong shown, 2 relevant missed
+ [scene] 'flood': 0 wrong shown, 1 relevant missed
+ [scene] 'parliament': 1 wrong shown, 7 relevant missed
+ [scene] 'protest with flags on street': 0 wrong shown, 3 relevant missed
+ [scene] 'press conference with microphones': 0 wrong shown, 3 relevant missed
+ [scene] 'fire at night': 0 wrong shown, 4 relevant missed
+ [scene] 'politician addressing a rally': 0 wrong shown, 3 relevant missed
+ [attribute] 'woman in a white saree with microphone': 0 wrong shown, 3 relevant missed
+ [attribute] 'man in pink turban': 0 wrong shown, 9 relevant missed
+ [attribute] 'red lpg cylinders': 0 wrong shown, 3 relevant missed
+ [place] 'high court': 2 wrong shown, 5 relevant missed
+ [place] 'stadium': 0 wrong shown, 1 relevant missed
+ [person] 'putin': 0 wrong shown, 1 relevant missed
+ [person] 'amit shah': 1 wrong shown, 0 relevant missed
+ [person] 'imran khan': 0 wrong shown, 3 relevant missed
+ [person] 'shehbaz sharif': 0 wrong shown, 1 relevant missed
+ [person] 'amitabh bachchan': 2 wrong shown, 2 relevant missed
+ [person_context] 'amit shah at a rally': 1 wrong shown, 1 relevant missed

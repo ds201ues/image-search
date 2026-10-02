@@ -25,7 +25,9 @@ from .query_parse import parse as parse_query
 TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
 POOL = 50 # candidates per recall source
 MAX_RERANK = 150 # cap on candidates read by the reranker (latency)
-REL_MIN = 0.50 # relevance needed to show an image; 0.5 from the 2026-10-02 sweep on the archive sample (eval/integrated_report.txt)
+import os as _os
+# relevance needed to show an image, per stage-2 backend (sweeps 2026-10-02: eval/integrated_report.txt, eval/jev_batched_report.txt)
+REL_MIN = {"minilm": 0.50, "jev": 0.20}.get(_os.getenv("RERANK_BACKEND", "minilm"), 0.5)
 PERSON_MIN = 0.50 # belief a named person is in the image for it to count as "has the person"
 PERSON_SURE = 0.80 # below this the UI marks the person as "possible"
 STOP = {"the", "a", "an", "in", "on", "at", "of", "and", "with", "to", "for", "is", "are", "image", "images",

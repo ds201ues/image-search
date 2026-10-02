@@ -7,6 +7,7 @@ Read PLAN.md first. It holds the agreed architecture, decisions, costs, phases a
 - Architecture v2 (PLAN.md section 11): index keeps evidence (Luna description + name guesses, SigLIP image vector, bge-small description vector, faces); corpus job clusters faces and lets photos vote on names; query = people linking + generous recall (4 sources) + cross-encoder reranker; relevance = P(people) × P(context). Postgres + pgvector, FastAPI, one static HTML page.
 - Dates come only from API metadata / EXIF. Never let a model infer dates.
 - VLM is `gpt-6-luna` via OpenAI API (key in .env). Production self-hosted candidate (Qwen3-VL) must be benchmarked on eval/, not assumed.
+- Stage 2 relevance is a pluggable backend (`app/decide.py`): `jev` (TypeSafe decision model, default, batched 50 docs/call, budget cap) or `minilm` (local). Thresholds are per backend at the top of `app/search.py`.
 - Thresholds live at the top of `app/search.py` and `app/ingest.py`. Change them only with `eval/run_eval.py --sweep` evidence.
 - Do not fix a bad query with a special-case rule. Find which stage failed (recall, people evidence, reranker) using `--show-misses`, and fix that stage.
 - People confidence rules and thresholds live in `app/ingest.py` (step_people) and `app/config.py`. Results and rationale in PLAN.md section 10.
