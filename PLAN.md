@@ -293,8 +293,24 @@ attribute 0.58→0.86. Scores are decisive: 91% of pairs ≤ 0.1, 2.8% ≥ 0.5. 
 candidates; $0.042/M input tokens, no output tokens). Single-call latency was p50 2.5 s (150 calls at ~500 ms); batching 50 documents per call fixed it (latency is per call, not per token). OpenAI Decisions API (image-capable) is
 the drop-in next backend once the account is enabled (403 on 2026-10-02).
 
+### Review fixes (2026-10-02, after an independent architect review) — eval/v2_report.txt
+Fixed: people linker required wrong persons from ordinary words ("goal"→Naresh Goyal, "leaders"→Leander Paes, 13/198 queries);
+now only parse-named people (or whole directory names) link, never fuzzy single words; accents kept. RRF fusion before the 150 cap.
+Two result tiers (match ≥ 0.5, possible ≥ 0.1). Parse runs concurrently with the first recall pass (700 ms box).
+City alias tokens (Bangalore/Bengaluru…) in index and query. Query/click log. Human grading page (/grade, 300-pair pool).
+Eval fixed: judge sees caption + date (v2 cache), caption names count for name queries (blind image-only check missed Kohli in action
+shots), empty results count as P@10 = 0, known-item hit@k/MRR and 95% bootstrap intervals reported.
+| | P@10 | R@pool | empty | junk/q | hit@1 | hit@10 | never retrieved |
+|---|---|---|---|---|---|---|---|
+| before fixes (Jev @0.2, v1 judge) | 0.64 | 0.70 | 6 | 0.26 | 0.64 | 0.88 | 10 |
+| after fixes, both tiers (≥0.1), v2 judge | 0.78 [0.74–0.82] | 0.90 | 6 | 0.15 | **0.70** | **0.92** [0.88–0.96] | **7** |
+| after fixes, top tier only (≥0.5) | 0.81 [0.75–0.86] | 0.68 | 25 | 0.03 | | | |
+Per type (both tiers): place 0.79 (was 0.53), event_year 0.87 (was 0.42), hinglish 0.77, person 0.76. Zero-relevant queries in the pool 87→42.
+Live latency unchanged (~0.8–1.2 s warm; eval p50 93 ms only because every Jev score was cached).
+
 ### Open
-1. Reranker: replace with the decision model once latency is < 1 s (see above); distillation becomes optional (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.
+1. Human check of the judge: 2 journalists × 300 pairs at /grade (pool built); real query log → next eval set.
+2. Reranker: Jev is stage 2; distillation into a local model (E11 plan) for vendor independence and latency (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.
 3. Learned fusion / dynamic cutoff (E7) not trained. Query parse is time-boxed at 700 ms (uncached parse fills the cache in the background).
 4. Latency: 746 ms p50 with the 256-token reranker; keep under 1 s (consider 192 tokens or caching).
 

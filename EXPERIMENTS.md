@@ -82,4 +82,7 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  hit@10 0.86; cost ≈$0.34 for the whole eval. Single-call latency 2.5 s; batched 50 docs/call: same quality, p50 811 ms → ADOPTED as default stage 2 (thr 0.2: P@10 0.64, R 0.70, empty 6, junk 0.26, hit@10 0.88). eval/jev_batched_report.txt, PLAN.md §12.
 - E12 jev_parse (2026-10-02): Jev cannot replace the Luna query parse (no text generation → no Hinglish rewrite, no canonical names). It classifies well:
  city 99% and has-person 97% agreement with Luna, p50 516 ms, $0.05/1k queries. Keep the time-boxed Luna parse; use Jev for city if city ever becomes a boost. exp/jev_parse/
+- REVIEW FIXES (2026-10-02): linker bug (13/198 queries required a wrong person) fixed; RRF before cap; two tiers; concurrent parse; city aliases;
+ judge v2 (caption+date, caption names count); empties = 0. Result: P@10 0.78 [0.74–0.82], R@pool 0.90, hit@1 0.70, hit@10 0.92, never-retrieved 7
+ (from 0.64 / 0.70 / 0.64 / 0.88 / 10). Place 0.53→0.79, event_year 0.42→0.87. eval/v2_report.txt, PLAN.md §12.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

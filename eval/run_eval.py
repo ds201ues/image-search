@@ -31,7 +31,7 @@ def keep(results, threshold):
 def load_queries():
  qs = []
  if (HERE / "gen_queries.jsonl").exists():
- qs += [{"query": q["query"], "type": q["type"]} for q in map(json.loads, (HERE / "gen_queries.jsonl").open())]
+ qs += [{"query": q["query"], "type": q["type"], "source_image": q.get("source_image")} for q in map(json.loads, (HERE / "gen_queries.jsonl").open())]
  if (HERE / "hand_queries.txt").exists():
  for l in (HERE / "hand_queries.txt").open():
  if l.strip() and not l.startswith("#"):

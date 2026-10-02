@@ -125,9 +125,15 @@ def _judge_one(q, iid, file, names=None, ctx=None):
  with CACHE.open("a") as f:
  f.write(json.dumps({"query": q, "image_id": iid, "grade": out["grade"], "reason": out["reason"], "judged_as": q_judge}) + "\n")
  return
- if names: # blind name check, then judge only the context
+ if names: # name check: blind recognition OR the photographer's caption naming the person; then judge only the context
  seen = [p["name"] for p in blind_people(iid, file)]
- if not all(any(_same(n, s) for s in seen) for n in names):
+ cap = (photo_meta(iid).split("\n")[0] or "").lower()
+ def named(n):
+ if any(_same(n, s) for s in seen):
+ return True
+ toks = [t for t in n.lower().replace(".", " ").split() if len(t) > 2]
+ return bool(toks) and all(t in cap for t in toks) # every name word appears in the caption
+ if not all(named(n) for n in names):
  grade, reason = 0, f"blind ID saw {seen or 'nobody'}, not {names}"
  elif not ctx:
  grade, reason = 2, f"blind ID saw {names}"
