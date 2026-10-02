@@ -16,7 +16,8 @@ import re, time
 from difflib import get_close_matches
 from .db import connect, flatten_vlm
 from .embed import embed_text
-from .text import embed_query, rerank
+from .text import embed_query
+from .decide import rerank
 from .config import QUERY_PARSE
 from .query_parse import parse as parse_query
 

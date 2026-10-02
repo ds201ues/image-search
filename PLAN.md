@@ -276,8 +276,22 @@ People index: photos with a confident name 549→1,666 (caption names 2,392 rows
 - Dedup: no near-duplicates in a 10% sample; re-check on the full pack. Luna cost: Batch API halves it ($0.20/1k); compact schema $0.24/1k.
 - Heat: parallel local model inference overheated the laptop; heavy work moved to an ephemeral GPU machine, ~3.4 h.
 
+### Decision model as stage 2 (Jev, TypeSafe AI, 2026-10-02) — eval/jev_report.txt
+Stage 2 = one Noul question per (query, caption+description) to Jev (`app/decide.py`, RERANK_BACKEND=jev), MiniLM otherwise unchanged.
+| stage 2 | thr | P@10 | R@pool | empty | junk/q | hit@1 | hit@10 | p50 ms |
+|---|---|---|---|---|---|---|---|---|
+| MiniLM (integrated) | 0.5 | 0.55 | 0.61 | 9 | 0.53 | 0.63 | 0.84 | 746 |
+| Jev | 0.5 | **0.72** | 0.55 | 13 | **0.14** | 0.61 | 0.86 | 2468 |
+| Jev | 0.2 | 0.63 | 0.67 | 6 | 0.30 | | | |
+| Jev | 0.1 | 0.60 | 0.79 | 2 | 0.47 | | | |
+Jev dominates MiniLM at every threshold (at 0.2 it beats MiniLM@0.5 on all four metrics). person_context P@10 0.43→0.79, scene 0.61→0.76,
+attribute 0.58→0.86. Scores are decisive: 91% of pairs ≤ 0.1, 2.8% ≥ 0.5. Cost: ~20k calls, ≈$0.34 total (≈$0.0017 per query at 150
+candidates; $0.042/M input tokens, no output tokens). Blocker: latency p50 2.5 s (150 sequential-ish calls at ~500 ms each, 24 workers) → cut
+candidates to ~40 after fusion, batch several documents per call, raise concurrency; target < 1 s. OpenAI Decisions API (image-capable) is
+the drop-in next backend once the account is enabled (403 on 2026-10-02).
+
 ### Open
-1. Reranker upgrade or distillation (biggest precision lever). 2. Caption-aware Luna pass (E3: confident names 743→1,345 at index time) is
+1. Reranker: replace with the decision model once latency is < 1 s (see above); distillation becomes optional (biggest precision lever). 2. Caption-aware Luna pass (E3: confident names 743→1,345 at index time) is
  cached in exp/caption_aware_vlm/vlm_cache.jsonl but not yet evaluated. 3. Learned fusion / dynamic cutoff (E7) not trained.
 4. Latency: 746 ms p50 with the 256-token reranker; keep under 1 s (consider 192 tokens or caching).
 
