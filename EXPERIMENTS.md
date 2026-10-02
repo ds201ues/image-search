@@ -85,4 +85,9 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
 - REVIEW FIXES (2026-10-02): linker bug (13/198 queries required a wrong person) fixed; RRF before cap; two tiers; concurrent parse; city aliases;
  judge v2 (caption+date, caption names count); empties = 0. Result: P@10 0.78 [0.74–0.82], R@pool 0.90, hit@1 0.70, hit@10 0.92, never-retrieved 7
  (from 0.64 / 0.70 / 0.64 / 0.88 / 10). Place 0.53→0.79, event_year 0.42→0.87. eval/v2_report.txt, PLAN.md §12.
+- E13 faces (measured on 5k set, 2026-10-02; re-run on 23k): 478 caption-seeded references, 447 people (20 with ≥ 2 refs). Pairwise ROC: same-person median
+ cosine 0.36 vs different 0.065; TPR at 0.5 only 0.24. Naming precision against the gallery (caption hidden): 0.29 @0.4, 0.63 @0.45, 0.87 @0.5, 0.89 @0.55;
+ with margin ≥ 0.15 over the runner-up: 0.78 @0.4 (181 faces). Current thresholds (0.55 cluster / 0.45 gallery) are about right for THIS model; AuraFace's
+ separation is the ceiling → benchmark a stronger commercially licensed model on the same reference pairs (research running). Face sizes fine (p50 183 px,
+ 2% < 48 px), so MIN_FACE is not the problem. exp/faces/measure.py
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

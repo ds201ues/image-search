@@ -10,7 +10,7 @@ from app.db import connect
 
 conn = connect()
 refs = conn.execute("""SELECT r.person_id, r.emb, split_part(r.source, ':', 2) FROM person_refs r WHERE r.source LIKE 'caption:%'""").fetchall()
-pid = np.array([r[0] for r in refs]); R = np.stack([np.asarray(r[1], dtype=np.float32) for r in refs]); rimg = np.array([r[2] for r in refs])
+pid = np.array([r[0] for r in refs]); R = np.stack([np.asarray(r[1].to_numpy() if hasattr(r[1], "to_numpy") else r[1], dtype=np.float32) for r in refs]); rimg = np.array([r[2] for r in refs])
 R /= np.linalg.norm(R, axis=1, keepdims=True)
 print(f"caption-seeded references: {len(refs)} faces, {len(set(pid))} people, {sum(c >= 2 for c in collections.Counter(pid).values())} people with >= 2 refs")
 
@@ -28,7 +28,7 @@ for fpr in (0.01, 0.005, 0.001):
 
 # 2. nearest-reference naming
 faces = conn.execute("SELECT f.id, f.image_id, f.emb, f.bbox FROM faces f").fetchall()
-F = np.stack([np.asarray(r[2], dtype=np.float32) for r in faces]); F /= np.linalg.norm(F, axis=1, keepdims=True)
+F = np.stack([np.asarray(r[2].to_numpy() if hasattr(r[2], "to_numpy") else r[2], dtype=np.float32) for r in faces]); F /= np.linalg.norm(F, axis=1, keepdims=True)
 fimg = np.array([r[1] for r in faces])
 cap_names = collections.defaultdict(set)
 for iid, p in conn.execute("SELECT image_id, person_id FROM image_persons WHERE source = 'caption' AND score >= 0.7"):
@@ -41,16 +41,21 @@ sim = F @ R.T
 for k in range(len(faces)): # a reference from the same photo must not name itself
  sim[k, rimg == fimg[k]] = -1
 best = sim.argmax(1); bsim = sim[np.arange(len(faces)), best]; bpid = pid[best]
-print(f"\n{'thr':>5} {'named faces':>12} {'precision on caption-named photos':>34} {'n':>6} {'uncaptioned photos gaining a name':>34}")
-for thr in (0.3, 0.35, 0.4, 0.45, 0.5, 0.55):
- hit = bsim >= thr
+# margin: best match vs best match to a DIFFERENT person (ignoring other refs of the same person)
+sim2 = sim.copy()
+for k in range(len(faces)):
+ sim2[k, pid == bpid[k]] = -1
+margin = bsim - sim2.max(1)
+print(f"\n{'thr':>5} {'margin':>7} {'named faces':>12} {'precision on caption-named photos':>34} {'n':>6} {'uncaptioned photos gaining a name':>34}")
+for thr, mg in ((0.3, 0), (0.35, 0), (0.4, 0), (0.45, 0), (0.5, 0), (0.55, 0), (0.35, 0.1), (0.4, 0.1), (0.4, 0.15), (0.45, 0.1)):
+ hit = (bsim >= thr) & (margin >= mg)
  tp = fp = 0
  for k in np.where(hit)[0]:
  if fimg[k] in cap_names: # held-out check: does the caption agree?
  if bpid[k] in cap_names[fimg[k]]: tp += 1
  else: fp += 1
  unc = len({fimg[k] for k in np.where(hit)[0] if fimg[k] not in captioned})
- print(f"{thr:>5} {int(hit.sum()):>12} {tp / max(tp + fp, 1):>34.3f} {tp + fp:>6} {unc:>34}")
+ print(f"{thr:>5} {mg:>7} {int(hit.sum()):>12} {tp / max(tp + fp, 1):>34.3f} {tp + fp:>6} {unc:>34}")
 # top gaining people at 0.4
 cnt = collections.Counter(names[bpid[k]] for k in np.where(bsim >= 0.4)[0] if fimg[k] not in captioned)
 print("\nmost-named people in uncaptioned photos at thr 0.4:", cnt.most_common(12))
