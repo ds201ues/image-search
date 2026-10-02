@@ -9,12 +9,15 @@ queries = [l.strip() for l in open(out.parent / "queries.txt") if l.strip()] if 
 for f in sorted(out.glob("*.npy")):
  if f.stem.endswith("_queries"):
  continue
- key = f.stem; V = np.load(f); tbl = f"exp_image_embedding_{key}"
+ key = f.stem; tbl = f"exp_image_embedding_{key}"
+ if conn.execute("SELECT to_regclass(%s)", (tbl,)).fetchone()[0] and conn.execute(f"SELECT count(*) FROM {tbl}").fetchone()[0] == len(ids):
+ print(key, "already loaded"); continue
+ V = np.load(f)
  conn.execute(f"DROP TABLE IF EXISTS {tbl}")
  conn.execute(f"CREATE TABLE {tbl} (image_id text PRIMARY KEY, emb vector({V.shape[1]}))")
  with conn.cursor() as cur:
  cur.executemany(f"INSERT INTO {tbl} VALUES (%s, %s)", list(zip(ids, V)))
- conn.execute(f"CREATE INDEX ON {tbl} USING hnsw (emb vector_cosine_ops)")
+ # no HNSW: 5k rows scan exactly in a few ms, and index builds are slow on a 2-thread budget
  qf = out / f"{key}_queries.npy"
  if qf.exists() and queries:
  Q = np.load(qf); qt = f"{tbl}_queries"

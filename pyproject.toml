@@ -23,6 +23,8 @@ dependencies = [
  "pymupdf>=1.28.2",
  "imagehash>=4.3.2",
  "torchvision>=0.29.1",
+ "lightgbm>=4.7.0",
+ "scikit-learn>=1.9.1",
 ]
 
 [tool.uv]

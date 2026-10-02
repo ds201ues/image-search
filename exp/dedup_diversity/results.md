@@ -42,5 +42,23 @@ So in this sample, shoot grouping cannot help the 31% uncaptioned photos: those 
 the siblings differ in who is speaking / batting / framed, so copying a description would be wrong for people queries.
 **Not worth building for this sample.** Re-measure on the full pack; expect a few percent, still minor next to the $0.35/1k price.
 
-## 4. Result diversity (collapse siblings in top-10)
-(filled after the baseline eval; see below)
+## 4. Result diversity (collapse siblings in top-10): not measurable on this sample
+Baseline eval (198 queries, eval/baseline_report.txt): ALL P@10 0.59, junk/q 0.36. Collapsing shoot siblings
+(`exp_dedup_diversity_shoots`, 68 multi-photo shoots) changed the top-10 of **0 of 198 queries**: duplicate pairs in
+top-10 were already 0.00 on average. With only 3 strict near-dup groups the strict variant cannot differ either
+(run was stopped). Diversity is a non-issue at 10% sampling; it only becomes real on the full pack where bursts are intact.
+
+Thresholds to use on the full larger archive (from the eyeballed bands):
+- **collapse in results**: SigLIP cos ≥ 0.96 → "N similar" under one card. Safe; same shoot, near-identical frame.
+- **shoot grouping for evidence sharing**: SigLIP ≥ 0.93 OR (same date AND same byline). Share caption text/place/event down-weighted; never share people names without a face match.
+- never collapse at ≤ 0.93: those are merely the same scene type.
+- perceptual hashes: skip; they found nothing SigLIP missed.
+
+## Recommendation
+**Drop dedup/diversity for the 5k sample** (0.1% duplicates, 0 queries affected, VLM-skip saving 0.1%). Re-measure on the larger archive
+with the thresholds above; expect a few % duplicates there, still minor at $0.35/1k. Keep `exp_dedup_diversity_shoots` for E1/E2
+(same date+byline key is the part that scales).
+
+Integration if the full pack warrants it: `app/ingest.py` corpus job after `embed` builds `images.shoot_id` (LATERAL top-10 on clip ≥ 0.93 + date/byline union-find, as in `_clusters`);
+`app/search.py` after the relevance sort keeps the first result per shoot/near-dup group in the top-10 and attaches the rest as `similar_ids`.
+Artifacts: exp/dedup_diversity/{dedup.py, diversity_eval.py, contact_sheet.html, band_*.png, stats.json, diversity_shoots.txt}.

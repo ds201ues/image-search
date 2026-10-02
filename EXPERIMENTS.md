@@ -49,4 +49,28 @@ Dependencies: E7 needs the judged pools from baseline + E1 (more labels). Everyt
 Idea sources: our own misses (PLAN.md section 11), Kaggle retrieval competitions (see research notes in exp/research/), 2026 model surveys.
 
 ## Results log
-(filled in as experiments finish; one line per experiment, link to exp/<name>/results.md)
+Baseline (archive sample, 198 queries, judged): P@10 0.59, R@pool 0.55, 24 empty, junk/q 0.36. Ablation: without reranker R@pool 0.96 / P@10 0.38;
+SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index thin: Luna named someone in 743 of 5,002 photos). eval/baseline_report.txt
+- E8 dedup_diversity: DROP for this sample. 3 near-dup groups in 5,002; phash adds nothing over SigLIP; shoot grouping reaches 1 uncaptioned photo; VLM-skip saving 0.1%. Re-measure on the full larger archive. exp/dedup_diversity/results.md
+- E6 query_understanding: ADOPT the parse (canonical names, years, Hinglish rewrite; union original+rewritten text to avoid over-rewrites like ramp→runway);
+ city as boost only (62% of photos have a city; the filter dropped a relevant Srinagar photo). Parsed: R@pool 0.63→0.69, empties 22→15, P@10 flat (0.59→0.58);
+ event_year recall 0.00→0.50, hinglish 0.15→0.45, place 0.37→0.52. Blocker: Luna text parse p50 2.2 s / p95 3.5 s, $0.13 per 1k queries → needs cache,
+ a faster model, or a progressive UI. exp/query_understanding/results.md
+- E9 vlm_cost (cost side final, quality pending): baseline $0.396/1k; Batch API $0.198 (12 min turnaround for 300); compact schema $0.244; detail=low $0.347;
+ 512px $0.351; gpt-5-nano $0.299; omitting reasoning_effort defaults to medium and costs MORE ($0.491). exp/vlm_cost/
+- E1 caption_retrieval (scored from saved runs; agent cut off by spend limit): caption in full-text (a) and in desc vector (b): P@10 0.59→0.61/0.63, recall flat, place P@10 0.64→0.78.
+ Caption in the RERANKER doc (c): a different operating curve: at thr 0.2 empties 26→5, R@pool 0.48→0.58, event_year recall 0.00→0.50, hinglish 0.08→0.31,
+ but P@10 0.59→0.54 and junk/q 0.36→0.81; at thr 0.7: P@10 0.58, R 0.52, empty 13, junk 0.45. ADOPT a+b now; adopt c together with a recalibrated
+ threshold / better reranker (E5). exp/caption_retrieval/{a,b,c,baseline}.json
+- E5 reranker (eval pairs, n=4,501, GPU-scored): caption docs raise AUC for EVERY model (+0.02–0.04). MiniLM-L6 current: AUC 0.789 (plain) / 0.836 (caption).
+ Best: mxbai-rerank-large-v2 0.894 (too slow on CPU), bge-reranker-v2-m3 0.888 (~8 s/150 pairs CPU, GPU or hosted only), gte-reranker-modernbert-base 0.875 (~3 s CPU),
+ ettin-68m 0.873, ettin-32m 0.852. Small Ettins (17m/32m) do not beat MiniLM by enough; a real jump needs a 150M+ model → GPU serving, hosted rerank
+ (Voyage ~$0.8/1k queries) or distillation (E12, not run). exp/reranker/analysis_archive.json
+- E4 image_embedding (source recall@50 only, GPU-embedded): siglip2-base 0.815; fg-clip2-base 0.783 (worse); siglip2-so400m 0.869 (+5.4, attribute 0.79→0.91,
+ hinglish 0.72→0.81; ~6× CPU cost, dim 1152); PE-Core-L 0.861 (scene 0.91, place worse). Recall before the reranker is already 0.96 from the 4-source union,
+ so the end-to-end gain is bounded; so400m is the only candidate worth a full eval later. exp/image_embedding/source_recall.json
+- E3 caption_aware_vlm (Luna pass done for 5,002 photos, $≈1.8; eval not run, agent cut off): photos with a ≥0.8 name 743→1,345 (+81%), 2,014 name guesses,
+ caption_consistent=false on 45 photos (captions naming people not visible), likely_queries written for all. Needs the build+eval step. exp/caption_aware_vlm/vlm_cache.jsonl
+- E2 caption_people (extraction done, measurement not run): 3,435 captions → 1,931 canonical persons with aliases. exp/caption_people/{names.jsonl,persons.json}
+- E7 learned_fusion (cut off): only the dynamic-cutoff sweep landed: floor 0.3, ratio 0.5, k 0. No learned ranker trained.
+- E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

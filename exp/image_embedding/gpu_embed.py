@@ -16,6 +16,7 @@ import numpy as np, torch
 from PIL import Image
 
 dev = "cuda" if torch.cuda.is_available() else "cpu"
+torch.backends.cudnn.enabled = False # the pip torch wheel on some CUDA AMIs fails to load its cuDNN sub-libraries; only the tiny patch conv uses it
 
 
 def _n(x):
