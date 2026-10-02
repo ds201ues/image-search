@@ -168,7 +168,12 @@ VLM_MIN_CONF = 0.3 # Luna guesses below this are noise; everything above is kept
 CAPTION_WEIGHT = 0.9 # a caption naming someone is strong evidence, not proof (people get cropped out, named as context)
 CAPTION_REF_CONF = 0.8 # single-face photo + one caption name at this confidence -> reference face for that person
 CLUSTER_SIM = 0.55 # AuraFace cosine for "same person" when grouping faces
-GALLERY_SIM = 0.45 # a face this close to a gallery reference counts as a vote
+GALLERY_SIM = 0.40 # a face this close to a reference counts as a vote ...
+GALLERY_MARGIN = 0.15 # ... if it also beats the best reference of any OTHER person by this much (open-set rule; exp/faces/measure.py:
+ # 0.40 + margin 0.15 -> 85% precision like 0.55 alone, but names 9% more faces)
+GALLERY_SURE = 0.55 # above this no margin is needed
+CAPTION_ASSIGN_SIM = 0.30 # caption names one person, several faces: the face closest to that person's references (and this close) is theirs
+REF_OUTLIER_SIM = 0.20 # a reference that resembles none of its person's other references (3+ refs) is a mislabelled face
 
 
 def step_text(conn, batch=64):
@@ -250,9 +255,30 @@ def step_people(conn):
  AND (SELECT count(*) FROM faces g WHERE g.image_id = ip.image_id) = 1
  AND (SELECT count(*) FROM image_persons j WHERE j.image_id = ip.image_id AND j.source = 'caption') = 1""",
  (CAPTION_WEIGHT * CAPTION_REF_CONF,))
- nrefs = conn.execute("SELECT count(*) FROM person_refs WHERE source LIKE 'caption:%'").fetchone()[0]
+ # caption names exactly one person but the photo has several faces: the face closest to that person's existing
+ # references is theirs (Berg et al., "Names and Faces in the News"), and becomes another reference
+ with conn.cursor() as cur:
+ cur.execute("DELETE FROM person_refs WHERE source LIKE 'caption2:%'")
+ cur.execute("""INSERT INTO person_refs (person_id, emb, source)
+ SELECT person_id, emb, 'caption2:' || image_id FROM (
+ SELECT ip.person_id, f.emb, f.image_id,
+ (SELECT min(r.emb <=> f.emb) FROM person_refs r WHERE r.person_id = ip.person_id AND r.source LIKE 'caption:%%') AS d,
+ row_number() OVER (PARTITION BY ip.image_id ORDER BY
+ (SELECT min(r.emb <=> f.emb) FROM person_refs r WHERE r.person_id = ip.person_id AND r.source LIKE 'caption:%%')) AS rn
+ FROM image_persons ip JOIN faces f ON f.image_id = ip.image_id
+ WHERE ip.source = 'caption' AND ip.score >= %s
+ AND (SELECT count(*) FROM faces g WHERE g.image_id = ip.image_id) BETWEEN 2 AND 6
+ AND (SELECT count(*) FROM image_persons j WHERE j.image_id = ip.image_id AND j.source = 'caption') = 1) x
+ WHERE rn = 1 AND d IS NOT NULL AND 1 - d >= %s""", (CAPTION_WEIGHT * CAPTION_REF_CONF, CAPTION_ASSIGN_SIM))
+ # reference cleaning: a reference unlike every other reference of the same person (3+ refs) is a wrong face
+ cur.execute("""DELETE FROM person_refs r WHERE r.source LIKE 'caption%%'
+ AND (SELECT count(*) FROM person_refs o WHERE o.person_id = r.person_id) >= 3
+ AND NOT EXISTS (SELECT 1 FROM person_refs o WHERE o.person_id = r.person_id AND o.id <> r.id AND 1 - (o.emb <=> r.emb) >= %s)""",
+ (REF_OUTLIER_SIM,))
+ nrefs, nrefs2 = conn.execute("""SELECT count(*) FILTER (WHERE source LIKE 'caption:%'), count(*) FILTER (WHERE source LIKE 'caption2:%')
+ FROM person_refs""").fetchone()
  print(f" captions: {len(capn)} photos name someone ({sum(len(v) for v in capn.values())} names, "
- f"${cap_spent['usd']:.3f} new extraction), {nrefs} reference faces seeded")
+ f"${cap_spent['usd']:.3f} new extraction), {nrefs} single-face references + {nrefs2} assigned in multi-face photos (after outlier cleaning)")
 
  cl = _clusters(conn)
  with conn.cursor() as cur:
@@ -261,11 +287,17 @@ def step_people(conn):
  nfaces = {}
  for _, iid in faces:
  nfaces[iid] = nfaces.get(iid, 0) + 1
- gallery = {fid: (pid, sim) for fid, pid, sim in conn.execute(f"""
- SELECT f.id, best.person_id, best.sim FROM faces f, LATERAL (
- SELECT person_id, 1 - (r.emb <=> f.emb) AS sim FROM person_refs r
- WHERE r.source NOT LIKE 'vlm:%%' ORDER BY r.emb <=> f.emb LIMIT 1) best
- WHERE best.sim >= {GALLERY_SIM}""")}
+ gallery = {}
+ for fid, pid, sim, pid2, sim2 in conn.execute(f"""
+ SELECT f.id, t.person_id, t.sim, t.person_id2, t.sim2 FROM faces f, LATERAL (
+ SELECT (array_agg(person_id ORDER BY sim DESC))[1] AS person_id, max(sim) AS sim,
+ (array_agg(person_id ORDER BY sim DESC))[2] AS person_id2,
+ (array_agg(sim ORDER BY sim DESC))[2] AS sim2
+ FROM (SELECT r.person_id, max(1 - (r.emb <=> f.emb)) AS sim FROM person_refs r
+ WHERE r.source NOT LIKE 'vlm:%%' GROUP BY r.person_id ORDER BY sim DESC LIMIT 2) q) t
+ WHERE t.sim >= {GALLERY_SIM}"""):
+ if sim >= GALLERY_SURE or sim - (sim2 or 0.0) >= GALLERY_MARGIN: # open-set: clear winner or very sure
+ gallery[fid] = (pid, sim)
  members = {}
  for fid, iid in faces:
  members.setdefault(cl[fid], []).append((fid, iid))

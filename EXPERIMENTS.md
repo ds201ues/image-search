@@ -97,4 +97,9 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  paid routes: InsightFace commercial licence (same architecture, ~4-6x fewer pose errors) or AWS Rekognition ($1 per 1k faces; RecognizeCelebrities
  coverage of Indian figures untested). Free improvements: caption-conditioned naming (lower bar when the caption names the person), reference
  cleaning (drop refs disagreeing with their person's other refs; min face 80 px; high det score), margin rule.
+- E13 faces on 33k (exp/faces/measure_33k.txt): 3,562 caption refs, 2,796 people (385 with ≥ 2 refs), same-person median 0.42. Naming precision
+ (caption hidden): 0.85 @0.55 (2,923 faces) vs 0.85 @0.40+margin 0.15 (3,179 faces, 529 uncaptioned photos named vs 446). Top names gained in
+ uncaptioned photos: Modi 76, Fadnavis 40, Kejriwal 39, Uddhav 34, Mamata 34. IMPLEMENTED in step_people: open-set margin rule
+ (GALLERY_SIM 0.40 + GALLERY_MARGIN 0.15, or ≥ 0.55), caption-conditioned face assignment in multi-face photos (caption2 refs),
+ reference outlier cleaning. Re-measure after the next people run.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
