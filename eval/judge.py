@@ -10,7 +10,7 @@ Caveat: the judge is the same model that guessed names at index time, so shared 
 import json, threading
 from pathlib import Path
 from openai import OpenAI
-from app.config import DATA_DIR, VLM_MODEL, VLM_PRICE_IN, VLM_PRICE_OUT
+from app.config import DATA_DIR, THUMB_DIR, VLM_MODEL, VLM_PRICE_IN, VLM_PRICE_OUT
 from app.vlm import _jpeg_b64
 
 CACHE = Path(__file__).parent / "judgments.jsonl"
@@ -43,8 +43,17 @@ def _load():
  _cache = {}
  if CACHE.exists():
  for l in CACHE.open():
+ try:
  r = json.loads(l); _cache[(r["query"], r["image_id"])] = r["grade"]
+ except (json.JSONDecodeError, KeyError):
+ pass # partial line from a concurrent writer
  return _cache
+
+
+def _img(file):
+ """Judge from the 768px thumbnail when it exists (same pixels the indexer saw, no 12 MB decode)."""
+ tp = THUMB_DIR / (Path(str(file)).stem + ".jpg")
+ return tp if tp.exists() else DATA_DIR / file
 
 
 def _call(text, file, schema, name):
@@ -54,7 +63,7 @@ def _call(text, file, schema, name):
  model=VLM_MODEL, reasoning_effort="low",
  messages=[{"role": "user", "content": [
  {"type": "text", "text": text},
- {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_jpeg_b64(DATA_DIR / file)}"}}]}],
+ {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_jpeg_b64(_img(file))}"}}]}],
  response_format={"type": "json_schema", "json_schema": {"name": name, "strict": True, "schema": schema}})
  with _lock:
  spent["usd"] += (r.usage.prompt_tokens * VLM_PRICE_IN + r.usage.completion_tokens * VLM_PRICE_OUT) / 1e6
@@ -70,7 +79,10 @@ def blind_people(iid, file):
  _blind = {}
  if BLIND.exists():
  for l in BLIND.open():
+ try:
  r = json.loads(l); _blind[r["image_id"]] = r["people"]
+ except (json.JSONDecodeError, KeyError):
+ pass
  if iid in _blind:
  return _blind[iid]
  ppl = [p for p in _call(BLIND_PROMPT, file, BLIND_SCHEMA, "people")["people"] if p["confidence"] >= 0.7]
@@ -88,6 +100,14 @@ def _same(a, b):
 
 
 def _judge_one(q, iid, file, names=None, ctx=None):
+ if names is None and ctx is not None and ctx != q: # no names, but the query carried a year: judge the rest
+ q_judge = ctx or q
+ out = _call(PROMPT.format(q=q_judge), file, SCHEMA, "judge")
+ with _lock:
+ _cache[(q, iid)] = out["grade"]
+ with CACHE.open("a") as f:
+ f.write(json.dumps({"query": q, "image_id": iid, "grade": out["grade"], "reason": out["reason"], "judged_as": q_judge}) + "\n")
+ return
  if names: # blind name check, then judge only the context
  seen = [p["name"] for p in blind_people(iid, file)]
  if not all(any(_same(n, s) for s in seen) for n in names):
@@ -108,7 +128,7 @@ def _judge_one(q, iid, file, names=None, ctx=None):
  model=VLM_MODEL, reasoning_effort="low",
  messages=[{"role": "user", "content": [
  {"type": "text", "text": PROMPT.format(q=q)},
- {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_jpeg_b64(DATA_DIR / file)}"}}]}],
+ {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_jpeg_b64(_img(file))}"}}]}],
  response_format={"type": "json_schema", "json_schema": {"name": "judge", "strict": True, "schema": SCHEMA}})
  out = json.loads(r.choices[0].message.content)
  with _lock:
@@ -122,7 +142,7 @@ def _judge_one(q, iid, file, names=None, ctx=None):
 CALL_DEADLINE = 90 # seconds of wall clock per judgment, whatever the HTTP layer does
 
 
-def grades(pairs, files, names_for=None, workers=16):
+def grades(pairs, files, names_for=None, workers=32):
  """pairs: [(query, image_id)] -> {pair: grade or None}; judges only uncached pairs.
  names_for: query -> (person names in the query, rest of the query) for blind name judging.
  Uses daemon threads with a wall-clock deadline per call: a connection the proxy keeps open

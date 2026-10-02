@@ -12,7 +12,7 @@ Metrics (grade 2 = relevant, 1 = partial counts half):
  empty queries with no results although the pool has a relevant photo
  junk shown results graded 0
 """
-import argparse, json, statistics as st
+import argparse, json, re, statistics as st
 from pathlib import Path
 from app.db import connect
 from app import search as S
@@ -57,16 +57,25 @@ def main():
  if v == "full":
  lat.append(r["timings"]["total_ms"])
  pairs = {(q["query"], x["id"]) for q in qs for v in VARIANTS for x in runs[(v, q["query"])][:20]}
- # queries naming people are judged blind on names (see eval/judge.py)
- names_for = {}
+ # queries naming people are judged blind on names (see eval/judge.py); years are checked against the stored date
+ names_for, year_of = {}, {}
  for q in qs:
  r = S.search(q["query"], conn=conn, limit=1)
- # judge names blind only when the people reading is the likely one
  nm = r["required"]
- if nm:
- ctx = " ".join(w for w in r["reranked_as"].split() if not any(w in n.lower().split() for n in nm))
- names_for[q["query"]] = (nm, ctx)
+ ys = re.findall(r"\b(19[5-9]\d|20[0-4]\d)\b", q["query"])
+ if ys:
+ year_of[q["query"]] = (int(min(ys)), int(max(ys)))
+ ctx = " ".join(w for w in r["reranked_as"].split() if not any(w in n.lower().split() for n in nm)) if nm else r["reranked_as"]
+ if nm or ys:
+ names_for[q["query"]] = (nm or None, ctx)
  g = grades(pairs, files, names_for)
+ # a photo outside the asked year range cannot satisfy the query, whatever it shows
+ years = dict(conn.execute("SELECT id, extract(year from date_published)::int FROM images"))
+ for (qq, iid), gr in list(g.items()):
+ if qq in year_of and gr:
+ y = years.get(iid)
+ if y is None or not (year_of[qq][0] <= y <= year_of[qq][1]):
+ g[(qq, iid)] = 0
  print(f"judged pairs: {len(pairs)} (new judging cost ${spent['usd']:.3f} over {spent['calls']} calls)")
 
  def score(results, q):

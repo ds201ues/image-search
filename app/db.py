@@ -29,8 +29,6 @@ CREATE INDEX IF NOT EXISTS images_date ON images (date_published);
 ALTER TABLE images ADD COLUMN IF NOT EXISTS doc_text text; -- what the reranker reads
 ALTER TABLE images ADD COLUMN IF NOT EXISTS desc_emb vector({TEXT_DIM}); -- meaning of the description
 CREATE INDEX IF NOT EXISTS images_desc_emb ON images USING hnsw (desc_emb vector_cosine_ops);
-ALTER TABLE faces ADD COLUMN IF NOT EXISTS cluster_id int; -- same person across the archive
-CREATE INDEX IF NOT EXISTS faces_cluster ON faces (cluster_id);
 
 CREATE TABLE IF NOT EXISTS persons (
  id serial PRIMARY KEY,
@@ -58,6 +56,8 @@ CREATE TABLE IF NOT EXISTS faces (
  match_score real
 );
 CREATE INDEX IF NOT EXISTS faces_image ON faces (image_id);
+ALTER TABLE faces ADD COLUMN IF NOT EXISTS cluster_id int; -- same person across the archive
+CREATE INDEX IF NOT EXISTS faces_cluster ON faces (cluster_id);
 
 CREATE TABLE IF NOT EXISTS image_persons ( -- who is in each image, from the VLM or face matching
  image_id text REFERENCES images(id) ON DELETE CASCADE,
@@ -74,6 +74,20 @@ SELECT image_id, person_id, 1 - exp(sum(ln(greatest(1 - score, 1e-6)))) AS score
  array_agg(source || ':' || round(score::numeric, 2) ORDER BY source) AS evidence
 FROM image_persons GROUP BY image_id, person_id;
 CREATE INDEX IF NOT EXISTS faces_person ON faces (person_id);
+-- source metadata read from the files (IPTC / EXIF / XMP). Captions are evidence, like the VLM description.
+ALTER TABLE images ADD COLUMN IF NOT EXISTS caption text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS headline text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS keywords text[];
+ALTER TABLE images ADD COLUMN IF NOT EXISTS city text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS state text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS country text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS byline text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS credit text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS camera text;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS date_source text; -- exif_original | iptc | xmp | exif_file | caption_text | api
+ALTER TABLE images ADD COLUMN IF NOT EXISTS meta jsonb; -- everything else read from the file
+ALTER TABLE images ADD COLUMN IF NOT EXISTS orig_file text; -- original path when the indexed file is derived (PDF)
+CREATE INDEX IF NOT EXISTS images_city ON images (lower(city));
 """
 
 

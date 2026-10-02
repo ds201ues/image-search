@@ -20,6 +20,8 @@ dependencies = [
  "python-dotenv>=1.0",
  "beautifulsoup4>=4.12",
  "sentence-transformers>=6.1.0",
+ "pymupdf>=1.28.2",
+ "imagehash>=4.3.2",
 ]
 
 [tool.uv]

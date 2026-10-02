@@ -5,13 +5,55 @@ uv run python -m app.ingest --dir data/sample --steps embed,faces # no API neede
 Steps: register, embed, faces, vlm, text, people
 """
 import argparse, json, time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 from pathlib import Path
 from PIL import Image
 from .config import DATA_DIR, THUMB_DIR, FACE_MATCH_THRESHOLD
 from .db import connect, init_schema, rebuild_search_text
+from . import meta as M
 
-EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+EXTS = M.IMAGE_EXTS | M.PDF_EXTS
+THUMB_SIDE = 768 # one thumbnail serves the UI, SigLIP and the VLM (which resizes to 768 anyway)
+PDF_DIR = DATA_DIR / "pdf"
+
+
+def thumb_path(iid: str) -> Path:
+ return THUMB_DIR / f"{iid}.jpg"
+
+
+def _prepare(args):
+ """Worker: read metadata, extract PDF photo, write thumbnail. Returns a row dict or an error string."""
+ path, rel, api = args
+ try:
+ iid = api.get("image_id") or path.stem
+ src = path
+ if path.suffix.lower() in M.PDF_EXTS:
+ src = M.pdf_photo(path, PDF_DIR)
+ if src is None:
+ return f"{rel}: no image in PDF"
+ m = M.read_all(src)
+ if path is not src: # the PDF itself may carry the caption
+ try:
+ pm = M.read_all(path) if False else {}
+ except Exception:
+ pm = {}
+ m = {**pm, **m}
+ m = {k: (v.replace("\x00", "") if isinstance(v, str) else [x.replace("\x00", "") for x in v] if isinstance(v, list) else v)
+ for k, v in m.items()}
+ tp = thumb_path(iid)
+ if not tp.exists():
+ M.open_scaled(src, THUMB_SIDE).save(tp, "JPEG", quality=85)
+ date = api.get("date_published") or m["date"]
+ return dict(id=iid, file=src.resolve().relative_to(DATA_DIR.resolve()).as_posix() if src.resolve().is_relative_to(DATA_DIR.resolve()) else str(src),
+ orig_file=rel, width=m["width"], height=m["height"], date=date,
+ date_source="api" if api.get("date_published") else m["date_source"],
+ section=api.get("section"), source_url=api.get("source_url"), ref_title=api.get("ref_title"),
+ caption=m.get("caption"), headline=m.get("headline"), keywords=m.get("keywords") or None,
+ city=m.get("city"), state=m.get("state"), country=m.get("country"), byline=m.get("byline"),
+ credit=m.get("credit") or m.get("source"), camera=m.get("camera"),
+ meta={k: v for k, v in m.items() if k not in ("date", "width", "height") and not isinstance(v, (bytes,))})
+ except Exception as e:
+ return f"{rel}: {type(e).__name__}: {e}"
 
 
 def timed(name, n, fn):
@@ -22,34 +64,45 @@ def timed(name, n, fn):
  return s
 
 
-def register(conn, folder: Path):
- meta = {}
+def register(conn, folder: Path, workers=8):
+ """Register every image (and PDF-wrapped photo) in a folder: source metadata + thumbnail, in parallel."""
+ api = {}
  mp = folder / "metadata.jsonl"
  if mp.exists():
  for line in mp.open():
  try:
- r = json.loads(line); meta[r["file"]] = r
+ r = json.loads(line); api[r["file"]] = r
  except json.JSONDecodeError:
  pass # line still being written by the downloader
- # only files with metadata when a metadata file exists (skips images still being downloaded)
- files = sorted(p for p in folder.rglob("*") if p.suffix.lower() in EXTS
- and (not meta or p.relative_to(folder).as_posix() in meta))
- THUMB_DIR.mkdir(parents=True, exist_ok=True)
- rows = []
+ files = sorted(p for p in folder.rglob("*") if p.suffix.lower() in EXTS and not p.name.startswith("_")
+ and (not api or p.relative_to(folder).as_posix() in api))
+ have = {r[0] for r in conn.execute("SELECT id FROM images")}
+ jobs = []
  for p in files:
  rel = p.relative_to(folder).as_posix()
- m = meta.get(rel, {})
- iid = m.get("image_id") or p.stem
- thumb = THUMB_DIR / f"{iid}.jpg"
- im = Image.open(p)
- if not thumb.exists():
- t = im.convert("RGB"); t.thumbnail((480, 480)); t.save(thumb, "JPEG", quality=82)
- rows.append((iid, p.relative_to(DATA_DIR).as_posix(), im.width, im.height,
- m.get("date_published"), m.get("section"), m.get("source_url"), m.get("ref_title")))
+ a = api.get(rel, {})
+ if (a.get("image_id") or p.stem) not in have:
+ jobs.append((p, rel, a))
+ THUMB_DIR.mkdir(parents=True, exist_ok=True)
+ rows, errors = [], []
+ with ProcessPoolExecutor(workers) as ex:
+ for r in ex.map(_prepare, jobs, chunksize=8):
+ (errors if isinstance(r, str) else rows).append(r)
  with conn.cursor() as cur:
- cur.executemany("""INSERT INTO images (id, file, width, height, date_published, section, source_url, ref_title)
- VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (id) DO NOTHING""", rows)
+ cur.executemany("""INSERT INTO images (id, file, orig_file, width, height, date_published, date_source, section, source_url, ref_title,
+ caption, headline, keywords, city, state, country, byline, credit, camera, meta)
+ VALUES (%(id)s,%(file)s,%(orig_file)s,%(width)s,%(height)s,%(date)s,%(date_source)s,%(section)s,%(source_url)s,%(ref_title)s,
+ %(caption)s,%(headline)s,%(keywords)s,%(city)s,%(state)s,%(country)s,%(byline)s,%(credit)s,%(camera)s,%(meta)s)
+ ON CONFLICT (id) DO NOTHING""", [{**r, "meta": json.dumps(r["meta"], default=str)} for r in rows])
+ for e in errors[:20]:
+ print(" register error:", e)
+ if len(errors) > 20:
+ print(f" ... {len(errors)} register errors")
  return len(rows)
+
+
+def _abs(f: str) -> Path:
+ return Path(f) if f.startswith("/") else DATA_DIR / f
 
 
 def step_embed(conn, batch=16):
@@ -58,7 +111,7 @@ def step_embed(conn, batch=16):
  def run():
  for i in range(0, len(todo), batch):
  chunk = todo[i:i + batch]
- vecs = embed_images([Image.open(DATA_DIR / f) for _, f in chunk])
+ vecs = embed_images([Image.open(thumb_path(iid)) for iid, _ in chunk])
  with conn.cursor() as cur:
  cur.executemany("UPDATE images SET clip = %s WHERE id = %s", [(v, iid) for (iid, _), v in zip(chunk, vecs)])
  return todo, run
@@ -68,8 +121,19 @@ def step_faces(conn):
  from .faces import detect_and_embed, read_bgr
  todo = conn.execute("SELECT id, file FROM images WHERE NOT faces_done ORDER BY id").fetchall()
  def run():
+ import numpy as np
+ from .faces import DET_SIDE
  for iid, f in todo:
- faces = detect_and_embed(read_bgr(DATA_DIR / f))
+ try:
+ im = M.open_scaled(_abs(f), DET_SIDE) # detector runs at DET_SIDE anyway; DCT-scaled decode is 4-10x faster
+ bgr = np.ascontiguousarray(np.asarray(im)[:, :, ::-1])
+ with Image.open(_abs(f)) as o:
+ k = o.width / im.width
+ except Exception as e:
+ print(f" faces fail {iid}: {e}"); conn.execute("UPDATE images SET faces_done = true WHERE id = %s", (iid,)); continue
+ faces = detect_and_embed(bgr)
+ for x in faces:
+ x["bbox"] = [int(round(v * k)) for v in x["bbox"]]
  with conn.cursor() as cur:
  cur.execute("DELETE FROM faces WHERE image_id = %s", (iid,))
  cur.executemany("INSERT INTO faces (image_id, bbox, det_score, emb) VALUES (%s,%s,%s,%s)",
@@ -84,7 +148,7 @@ def step_vlm(conn, workers=8):
  stats = {"cost": 0.0, "tin": 0, "tout": 0, "fail": 0}
  def run():
  with ThreadPoolExecutor(workers) as ex:
- futs = {ex.submit(describe, DATA_DIR / f): iid for iid, f in todo}
+ futs = {ex.submit(describe, thumb_path(iid)): iid for iid, f in todo}
  for fut in as_completed(futs):
  iid = futs[fut]
  try:
@@ -224,6 +288,7 @@ def main():
  ap.add_argument("--dir", required=True)
  ap.add_argument("--steps", default="register,embed,faces,vlm,text,people")
  ap.add_argument("--workers", type=int, default=8, help="parallel VLM requests")
+ ap.add_argument("--procs", type=int, default=8, help="parallel processes for thumbnails/metadata")
  a = ap.parse_args()
  init_schema()
  conn = connect()
@@ -231,7 +296,7 @@ def main():
  folder = Path(a.dir).resolve()
  print(f"ingest {folder}")
  if "register" in steps:
- t = time.perf_counter(); n = register(conn, folder)
+ t = time.perf_counter(); n = register(conn, folder, a.procs)
  print(f" register {n:>6} images {time.perf_counter() - t:7.1f}s")
  for name, fn in [("embed", step_embed), ("faces", step_faces), ("vlm", lambda c: step_vlm(c, a.workers)), ("text", step_text), ("people", step_people)]:
  if name in steps:

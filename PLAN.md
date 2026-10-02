@@ -1,7 +1,7 @@
 # Image Search (DAM) for a newsroom photo archive — Project Plan
 
 Last updated: 2026-10-01
-Status: pilot built and running on a 100-image web sample (see section 10 for results). larger archive not received yet.
+Status: 5,002-file stratified sample of a larger news archive (`photos/`, indexed in Postgres db `imgsearch`). Experiments plan in EXPERIMENTS.md.
 
 ## 1. Goal
 
@@ -17,8 +17,8 @@ Requirements, in priority order: cheap, fast, accurate.
 | Topic | Fact |
 |---|---|
 | Users | Journalists. They type sentences, not keywords. |
-| Data | Images only. No captions, no IPTC text, no journalist query logs. Images come from an internal API and will be downloaded to a folder. |
-| Dates | Must come from API metadata / EXIF. Stored as a column and used as a filter. Never inferred by a model. |
+| Data | Archive files carry IPTC/XMP metadata (measured on the 5,002-file archive sample, 2026-10-02): caption 68%, byline 64%, city 62%, headline 40%, keywords 20%. 31% have no caption. Mostly professional camera originals (~3,200 px long side). No journalist query logs. |
+| Dates | 94% of files have one: EXIF DateTimeOriginal (82%), else IPTC/XMP created date, else a date typed in the caption. Sanity window 1990..today (unset camera clocks give 1980/2034/2099). Stored as a column and used as a filter. Never inferred by a model. |
 | Names | Any public figure, mostly popular Indian ones (politicians, cricketers, actors, business). |
 | Scale | 50,000 image sample now. Lifetime ~1 crore (10M) with daily additions. Daily volume unknown yet. |
 | Infra | Own data centres with lots of CPU, RAM, storage. GPU can be provisioned if justified. |
@@ -200,12 +200,26 @@ CORPUS JOBS (re-run after each ingest)
  (leave-one-out, so a guess never confirms itself)
  people belief ─► P(person in photo) = noisy-OR of independent evidence (view image_person_scores)
 QUERY
- link ─► people directory (names, aliases, fuzzy); ordinary description words never link
- recall ─► SigLIP + description vector + full-text + people, ~50 each, union
- precision ─► cross-encoder (ms-marco-MiniLM-L6, CPU) reads (query, description) → P(context) 0..1
- relevance ─► P(people in photo) × P(context); show if P(people) ≥ 0.5, or P(context) ≥ 0.2 when no one is named
+ link ─► people directory (names, aliases, fuzzy) with a link probability measured from the
+ archive: of photos whose description uses the word, how many show the person
+ ("trump" high, "cricket"→Smriti Mandhana ~0, unseen words like "kohli" 0.8)
+ rewrite ─► confidently linked words written in full ("mamta" → "mamata banerjee")
+ recall ─► SigLIP + description vector + full-text (~50 each) + all photos of linked people
+ precision ─► cross-encoder reads (query, "People: <names the index believes> + description")
+ and judges who and what together → calibrated 0..1
+ relevance ─► reranker × P(each confidently linked person is in the photo); show if ≥ 0.2
 ```
 Uncertain names are shown as "possible" (0.5–0.8) instead of being dropped.
+
+Lessons from building it (each was a patch first, then replaced by a system change):
+- Excluding "words that appear in descriptions" from name linking broke "trump", "putin", "kohli" (descriptions
+ mention them). Replaced by the measured link probability.
+- Stripping names and filler words before reranking gave the reranker fragments ("speaking podium" → 0.02).
+ Feeding the full query and putting names into the document fixed people + context in one model
+ ("trump speaking at a podium": Trump-at-podium photos 0.95–0.98, everything else ~0).
+- The judge, asked "is Kohli in this photo?", found Kohli in a pilot's cockpit. Names are now judged blind.
+- Through a TLS-intercepting corporate proxy some API calls hang in an SSL read despite client timeouts. Judging uses daemon
+ threads with a wall-clock deadline and resumes from cache.
 
 ### Evaluation v2
 - Queries: GPT-6 Luna writes journalist-style queries from random photos (`eval/make_queries.py`), plus
@@ -214,6 +228,20 @@ Uncertain names are shown as "possible" (0.5–0.8) instead of being dropped.
 - Names are judged blind: the judge lists who it recognises without seeing the query. When primed
  ("is Kohli here?") it found Kohli in a pilot's cockpit.
 - Metrics: P@10, recall against the pool, empty results, junk per query, latency. Threshold sweeps run offline.
+
+### Results on 1,018 news photos, 107 queries (69 Luna-written + 38 ours), judged by GPT-6 Luna
+| Query type | n | P@10 | R@pool | junk/query |
+|---|---|---|---|---|
+| person ("putin", "mamta") | 16 | 0.97 | 0.93 | 0.19 |
+| person + context ("trump speaking at a podium") | 15 | 0.59 | 0.75 | 1.07 |
+| scene | 37 | 0.86 | 0.66 | 0.05 |
+| place | 18 | 0.83 | 0.69 | 0.06 |
+| attribute | 21 | 0.73 | 0.83 | 0.33 |
+| **all** | 107 | **0.81** | **0.75** | **0.27** |
+| any single retriever alone | | 0.50–0.53 | 0.86 | 2.1–2.7 |
+Latency p50 401 ms, p95 505 ms (CPU, reranker is ~80% of it). Judging cost so far ≈ $0.45.
+Biggest remaining loss: the small reranker scores some relevant scene/place photos near 0
+("indoor sports arena", "statement jewelry"); compared offline in `eval/compare_rerankers.py`.
 
 ### Results on 100 images, 25 hand queries (before the 1,100-image run)
 | | P@10 | R@pool | junk/query |

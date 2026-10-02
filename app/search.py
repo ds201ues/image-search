@@ -18,6 +18,8 @@ from .db import connect, flatten_vlm
 from .embed import embed_text
 from .text import embed_query, rerank
 
+# Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
+TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
 POOL = 50 # candidates per recall source
 MAX_RERANK = 150 # cap on candidates read by the reranker (latency)
 REL_MIN = 0.20 # relevance needed to show an image (tune with eval/run_eval.py --sweep)
@@ -44,9 +46,9 @@ class People:
 
  def __init__(self, conn):
  self.conn = conn
- rows = conn.execute("""SELECT p.id, p.name, p.aliases, p.popularity,
- (SELECT count(*) FROM image_person_scores s WHERE s.person_id = p.id AND s.score >= 0.5)
- FROM persons p""").fetchall()
+ rows = conn.execute(f"""SELECT p.id, p.name, p.aliases, p.popularity,
+ (SELECT count(*) FROM {TABLES["scores"]} s WHERE s.person_id = p.id AND s.score >= 0.5)
+ FROM {TABLES["persons"]} p""").fetchall()
  self.names = {pid: name for pid, name, *_ in rows}
  rank = {pid: (seen, pop or 0) for pid, _, _, pop, seen in rows}
  better = lambda a, b: a if a is not None and rank[a] >= rank[b] else b
@@ -62,10 +64,10 @@ class People:
  self.full_keys, self.token_keys = list(self.full), list(self.token)
 
  def word_prior(self, word, pid):
- n, both = self.conn.execute("""
- SELECT count(*), count(*) FILTER (WHERE EXISTS (SELECT 1 FROM image_person_scores s
+ n, both = self.conn.execute(f"""
+ SELECT count(*), count(*) FILTER (WHERE EXISTS (SELECT 1 FROM {TABLES["scores"]} s
  WHERE s.image_id = i.id AND s.person_id = %s AND s.score >= 0.5))
- FROM images i WHERE i.tsv @@ plainto_tsquery('english', %s)""", (pid, word)).fetchone()
+ FROM {TABLES["images"]} i WHERE i.tsv @@ plainto_tsquery('english', %s)""", (pid, word)).fetchone()
  if n == 0:
  return self.WORD_PRIOR
  # share of photos using the word that show the person, pulled toward WORD_PRIOR by a weak prior
@@ -163,7 +165,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  pscore = {}
  if pids and "person" in use:
  for iid, pid, sc in conn.execute(f"""
- SELECT s.image_id, s.person_id, s.score FROM image_person_scores s JOIN images i ON i.id = s.image_id
+ SELECT s.image_id, s.person_id, s.score FROM {TABLES["scores"]} s JOIN {TABLES["images"]} i ON i.id = s.image_id
  WHERE s.person_id = ANY(%s) AND s.score >= 0.3 {dsql}""", (pids, *dargs)):
  pscore.setdefault(iid, {})[pid] = sc
  add("person", sorted(pscore, key=lambda i: -min(pscore[i].values())))
@@ -173,15 +175,15 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  if "vector" in use:
  qv = embed_text([ctx])[0]
  add("vector", [r[0] for r in conn.execute(
- f"SELECT id FROM images i WHERE clip IS NOT NULL {dsql} ORDER BY clip <=> %s LIMIT {POOL}", (*dargs, qv))])
+ f"SELECT id FROM {TABLES["images"]} i WHERE clip IS NOT NULL {dsql} ORDER BY clip <=> %s LIMIT {POOL}", (*dargs, qv))])
  if "desc" in use:
  dv = embed_query(ctx)
  add("desc", [r[0] for r in conn.execute(
- f"SELECT id FROM images i WHERE desc_emb IS NOT NULL {dsql} ORDER BY desc_emb <=> %s LIMIT {POOL}", (*dargs, dv))])
+ f"SELECT id FROM {TABLES["images"]} i WHERE desc_emb IS NOT NULL {dsql} ORDER BY desc_emb <=> %s LIMIT {POOL}", (*dargs, dv))])
  if "text" in use:
  add("text", [r[0] for r in conn.execute(f"""
  WITH q AS (SELECT to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', %s)), ' | ')) q)
- SELECT id FROM images i, q WHERE q.q IS NOT NULL AND tsv @@ q.q {dsql}
+ SELECT id FROM {TABLES["images"]} i, q WHERE q.q IS NOT NULL AND tsv @@ q.q {dsql}
  ORDER BY ts_rank_cd(tsv, q.q, 32) DESC LIMIT {POOL}""", (ctx, *dargs))])
  lap("recall_ms")
 
@@ -191,11 +193,11 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  ids = ids[:MAX_RERANK]
  docs = {}
  if ids:
- for iid, d, ppl in conn.execute("""
+ for iid, d, ppl in conn.execute(f"""
  SELECT i.id, coalesce(i.doc_text, ''),
  (SELECT string_agg(CASE WHEN s.score >= %s THEN p.name ELSE 'possibly ' || p.name END, ', ' ORDER BY s.score DESC)
- FROM image_person_scores s JOIN persons p ON p.id = s.person_id WHERE s.image_id = i.id AND s.score >= %s)
- FROM images i WHERE i.id = ANY(%s)""", (PERSON_SURE, PERSON_MIN, ids)):
+ FROM {TABLES["scores"]} s JOIN {TABLES["persons"]} p ON p.id = s.person_id WHERE s.image_id = i.id AND s.score >= %s)
+ FROM {TABLES["images"]} i WHERE i.id = ANY(%s)""", (PERSON_SURE, PERSON_MIN, ids)):
  docs[iid] = f"People: {ppl}. {d}" if ppl else d
  if "rerank" in use:
  pc = dict(zip(ids, rerank(ctx, [docs.get(i, "") for i in ids])))
@@ -222,7 +224,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  T["total_ms"] = round(sum(T.values()), 1)
 
  names = people(conn).names
- present = {p for (p,) in conn.execute("SELECT DISTINCT person_id FROM image_person_scores WHERE person_id = ANY(%s) AND score >= %s",
+ present = {p for (p,) in conn.execute(f"SELECT DISTINCT person_id FROM {TABLES["scores"]} WHERE person_id = ANY(%s) AND score >= %s",
  (pids, PERSON_MIN))} if pids else set()
  return {"query": q,
  "persons": [{"name": names[p], "p_link": round(c, 2), "words": w} for p, c, w in links],
@@ -234,15 +236,15 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
 def hydrate(conn, ids):
  if not ids:
  return []
- rows = conn.execute("""
+ rows = conn.execute(f"""
  SELECT i.id, i.file, i.width, i.height, i.date_published, i.section, i.source_url, i.ref_title, i.vlm, i.vlm_model,
  (SELECT coalesce(json_agg(json_build_object('name', p.name, 'score', round(s.score::numeric, 2),
  'evidence', s.evidence) ORDER BY s.score DESC), '[]')
- FROM image_person_scores s JOIN persons p ON p.id = s.person_id WHERE s.image_id = i.id AND s.score >= 0.3),
+ FROM {TABLES["scores"]} s JOIN {TABLES["persons"]} p ON p.id = s.person_id WHERE s.image_id = i.id AND s.score >= 0.3),
  (SELECT coalesce(json_agg(json_build_object('name', p.name, 'score', round(f.match_score::numeric, 2), 'bbox', f.bbox,
  'cluster', f.cluster_id)), '[]')
- FROM faces f LEFT JOIN persons p ON p.id = f.person_id WHERE f.image_id = i.id)
- FROM images i WHERE i.id = ANY(%s)""", (ids,)).fetchall()
+ FROM {TABLES["faces"]} f LEFT JOIN {TABLES["persons"]} p ON p.id = f.person_id WHERE f.image_id = i.id)
+ FROM {TABLES["images"]} i WHERE i.id = ANY(%s)""", (ids,)).fetchall()
  by = {r[0]: r for r in rows}
  out = []
  for iid in ids:
@@ -260,8 +262,8 @@ def hydrate(conn, ids):
 def similar(image_id: str, limit=40, conn=None):
  conn = conn or connect()
  t = time.perf_counter()
- ids = [r[0] for r in conn.execute("""SELECT id FROM images WHERE clip IS NOT NULL AND id <> %s
- ORDER BY clip <=> (SELECT clip FROM images WHERE id = %s) LIMIT %s""", (image_id, image_id, limit))]
+ ids = [r[0] for r in conn.execute(f"""SELECT id FROM {TABLES["images"]} WHERE clip IS NOT NULL AND id <> %s
+ ORDER BY clip <=> (SELECT clip FROM {TABLES["images"]} WHERE id = %s) LIMIT %s""", (image_id, image_id, limit))]
  ms = round((time.perf_counter() - t) * 1000, 1)
  res = hydrate(conn, ids)
  return {"query": f"similar to {image_id}", "timings": {"vector_ms": ms, "total_ms": ms}, "count": len(res), "results": res}
