@@ -1,0 +1,247 @@
+# One public figure per line, as named on English Wikipedia. Editable by the desk.
+# Politics — national
+Narendra Modi
+Amit Shah
+Rajnath Singh
+Nirmala Sitharaman
+S. Jaishankar
+Nitin Gadkari
+Piyush Goyal
+Ashwini Vaishnaw
+Jyotiraditya Scindia
+Shivraj Singh Chouhan
+Dharmendra Pradhan
+J. P. Nadda
+Hardeep Singh Puri
+Kiren Rijiju
+Smriti Irani
+Anurag Thakur
+Mansukh Mandaviya
+Bhupender Yadav
+Pralhad Joshi
+Droupadi Murmu
+Jagdeep Dhankhar
+C. P. Radhakrishnan
+Om Birla
+Rahul Gandhi
+Sonia Gandhi
+Priyanka Gandhi
+Mallikarjun Kharge
+Shashi Tharoor
+Jairam Ramesh
+P. Chidambaram
+K. C. Venugopal
+Sachin Pilot
+Ashok Gehlot
+Digvijaya Singh
+Arvind Kejriwal
+Manish Sisodia
+Atishi Marlena
+Sanjay Singh (AAP politician)
+Raghav Chadha
+Akhilesh Yadav
+Dimple Yadav
+Mayawati
+Lalu Prasad Yadav
+Tejashwi Yadav
+Nitish Kumar
+Chirag Paswan
+Sharad Pawar
+Supriya Sule
+Ajit Pawar
+Uddhav Thackeray
+Aaditya Thackeray
+Raj Thackeray
+Eknath Shinde
+Devendra Fadnavis
+Mamata Banerjee
+Abhishek Banerjee
+Suvendu Adhikari
+Mahua Moitra
+M. K. Stalin
+Udhayanidhi Stalin
+Edappadi K. Palaniswami
+Vijay (actor)
+K. Annamalai
+Pinarayi Vijayan
+Revanth Reddy
+K. Chandrashekar Rao
+K. T. Rama Rao
+N. Chandrababu Naidu
+Nara Lokesh
+Pawan Kalyan
+Y. S. Jagan Mohan Reddy
+Siddaramaiah
+D. K. Shivakumar
+B. S. Yediyurappa
+H. D. Kumaraswamy
+Yogi Adityanath
+Keshav Prasad Maurya
+Bhajan Lal Sharma
+Mohan Yadav
+Vishnu Deo Sai
+Bhupendra Patel
+Pushkar Singh Dhami
+Himanta Biswa Sarma
+Omar Abdullah
+Farooq Abdullah
+Mehbooba Mufti
+Bhagwant Mann
+Amrinder Singh Raja Warring
+Sukhvinder Singh Sukhu
+Hemant Soren
+Naveen Patnaik
+Mohan Charan Majhi
+Nayab Singh Saini
+Rekha Gupta
+Asaduddin Owaisi
+Prashant Kishor
+Brij Bhushan Sharan Singh
+Mohan Bhagwat
+Gyanesh Kumar
+Manmohan Singh
+L. K. Advani
+# Business
+Mukesh Ambani
+Nita Ambani
+Anant Ambani
+Akash Ambani
+Gautam Adani
+Ratan Tata
+N. Chandrasekaran
+Anand Mahindra
+Kumar Mangalam Birla
+Azim Premji
+Uday Kotak
+Nandan Nilekani
+N. R. Narayana Murthy
+Sudha Murty
+Shaktikanta Das
+Sanjay Malhotra
+# Cricket and sport
+Virat Kohli
+Rohit Sharma
+Shubman Gill
+Jasprit Bumrah
+Rishabh Pant
+Hardik Pandya
+KL Rahul
+Ravindra Jadeja
+Suryakumar Yadav
+Mohammed Shami
+Mohammed Siraj
+Yashasvi Jaiswal
+Ishan Kishan
+Sanju Samson
+Shreyas Iyer
+Kuldeep Yadav
+Prasidh Krishna
+MS Dhoni
+Sachin Tendulkar
+Sourav Ganguly
+Rahul Dravid
+Gautam Gambhir
+Yuvraj Singh
+Smriti Mandhana
+Harmanpreet Kaur
+Neeraj Chopra
+PV Sindhu
+Vinesh Phogat
+Bajrang Punia
+Sakshi Malik
+Mirabai Chanu
+Manika Batra
+Harmanpreet Singh (field hockey)
+D. Gukesh
+Sunil Chhetri
+# Film and entertainment
+Shah Rukh Khan
+Salman Khan
+Aamir Khan
+Amitabh Bachchan
+Abhishek Bachchan
+Aishwarya Rai Bachchan
+Jaya Bachchan
+Ranbir Kapoor
+Alia Bhatt
+Ranveer Singh
+Deepika Padukone
+Priyanka Chopra
+Kareena Kapoor
+Saif Ali Khan
+Katrina Kaif
+Vicky Kaushal
+Akshay Kumar
+Ajay Devgn
+Kajol
+Hrithik Roshan
+Kangana Ranaut
+Shahid Kapoor
+Kiara Advani
+Sidharth Malhotra
+Varun Dhawan
+Tiger Shroff
+Kartik Aaryan
+Rajkummar Rao
+Ayushmann Khurrana
+Taapsee Pannu
+Shraddha Kapoor
+Janhvi Kapoor
+Sara Ali Khan
+Anushka Sharma
+Karan Johar
+Farah Khan
+Rohit Shetty
+Sanjay Leela Bhansali
+Rajinikanth
+Kamal Haasan
+Prabhas
+Allu Arjun
+Jr. NTR
+Ram Charan
+Mahesh Babu
+Yash (actor)
+Nani (actor)
+Mohanlal
+Mammootty
+Diljit Dosanjh
+A. R. Rahman
+Arijit Singh
+Lata Mangeshkar
+# World
+Donald Trump
+JD Vance
+Marco Rubio
+Joe Biden
+Kamala Harris
+Vladimir Putin
+Sergey Lavrov
+Xi Jinping
+Shehbaz Sharif
+Asim Munir
+Imran Khan
+Muhammad Yunus
+Sheikh Hasina
+Benjamin Netanyahu
+Volodymyr Zelenskyy
+Keir Starmer
+Rishi Sunak
+Emmanuel Macron
+Friedrich Merz
+Mark Carney
+Justin Trudeau
+Anthony Albanese
+Shigeru Ishiba
+Mohammed bin Salman
+Mohamed bin Zayed Al Nahyan
+Ali Khamenei
+Masoud Pezeshkian
+Recep Tayyip Erdoğan
+Anura Kumara Dissanayake
+Elon Musk
+Sundar Pichai
+Satya Nadella
+Gavin Newsom
+António Guterres
+Pope Leo XIV
+Dalai Lama

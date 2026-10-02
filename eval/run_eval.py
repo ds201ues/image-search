@@ -1,0 +1,127 @@
+"""Judged evaluation: pooled results from several system variants, graded by GPT-6 Luna (cached).
+
+uv run python -m eval.run_eval # full system, judged
+uv run python -m eval.run_eval --sweep # also sweep the reranker threshold offline
+uv run python -m eval.run_eval --show-misses # list wrong results shown and good results missed
+
+Query sets: eval/gen_queries.jsonl (Luna-written from random photos) + eval/hand_queries.txt (ours, incl. user reports).
+Pool per query = top 20 of: full system, SigLIP only, description-vector only, full-text only, no reranker.
+Metrics (grade 2 = relevant, 1 = partial counts half):
+ P@10 share of shown results (up to 10) that are relevant
+ R@pool share of the pool's relevant photos the system shows (up to 60)
+ empty queries with no results although the pool has a relevant photo
+ junk shown results graded 0
+"""
+import argparse, json, statistics as st
+from pathlib import Path
+from app.db import connect
+from app import search as S
+from eval.judge import grades, spent
+
+HERE = Path(__file__).parent
+VARIANTS = {"full": ("vector", "desc", "text", "person", "rerank"), "siglip": ("vector", "person"),
+ "desc": ("desc", "person"), "fulltext": ("text", "person"), "no_rerank": ("vector", "desc", "text", "person")}
+
+
+def keep(results, threshold):
+ """Same rule as app/search.py: one threshold on relevance."""
+ return [x for x in results if x["relevance"] >= threshold]
+
+
+def load_queries():
+ qs = []
+ if (HERE / "gen_queries.jsonl").exists():
+ qs += [{"query": q["query"], "type": q["type"]} for q in map(json.loads, (HERE / "gen_queries.jsonl").open())]
+ if (HERE / "hand_queries.txt").exists():
+ for l in (HERE / "hand_queries.txt").open():
+ if l.strip() and not l.startswith("#"):
+ t, q = l.strip().split("|", 1)
+ qs.append({"query": q.strip(), "type": t.strip()})
+ return qs
+
+
+def main():
+ ap = argparse.ArgumentParser()
+ ap.add_argument("--sweep", action="store_true"); ap.add_argument("--show-misses", action="store_true")
+ a = ap.parse_args()
+ conn = connect(); S.search("warm up", conn=conn)
+ files = dict(conn.execute("SELECT id, file FROM images"))
+ qs = load_queries()
+
+ runs = {} # (variant, query) -> results list (ctx_min=0 so thresholds can be swept offline)
+ lat = []
+ for q in qs:
+ for v, use in VARIANTS.items():
+ r = S.search(q["query"], conn=conn, use=use, rel_min=0.0 if v == "full" else None)
+ runs[(v, q["query"])] = r["results"]
+ if v == "full":
+ lat.append(r["timings"]["total_ms"])
+ pairs = {(q["query"], x["id"]) for q in qs for v in VARIANTS for x in runs[(v, q["query"])][:20]}
+ # queries naming people are judged blind on names (see eval/judge.py)
+ names_for = {}
+ for q in qs:
+ r = S.search(q["query"], conn=conn, limit=1)
+ # judge names blind only when the people reading is the likely one
+ nm = r["required"]
+ if nm:
+ ctx = " ".join(w for w in r["reranked_as"].split() if not any(w in n.lower().split() for n in nm))
+ names_for[q["query"]] = (nm, ctx)
+ g = grades(pairs, files, names_for)
+ print(f"judged pairs: {len(pairs)} (new judging cost ${spent['usd']:.3f} over {spent['calls']} calls)")
+
+ def score(results, q):
+ shown = [x for x in results]
+ top = shown[:10]
+ val = lambda iid: {2: 1.0, 1: 0.5, 0: 0.0}.get(g.get((q, iid)), 0.0)
+ relevant_pool = {iid for (qq, iid), gr in g.items() if qq == q and gr == 2}
+ p10 = sum(val(x["id"]) for x in top) / len(top) if top else None
+ rec = len(relevant_pool & {x["id"] for x in shown}) / len(relevant_pool) if relevant_pool else None
+ junk = sum(1 for x in top if g.get((q, x["id"])) == 0)
+ return p10, rec, (not shown and bool(relevant_pool)), junk, len(shown)
+
+ def report(threshold, label):
+ rows = {}
+ for q in qs:
+ res = keep(runs[("full", q["query"])], threshold)
+ m = score(res, q["query"])
+ for k in (q["type"], "ALL"):
+ rows.setdefault(k, []).append(m)
+ print(f"\n{label}")
+ print(f"{'type':<16}{'n':>4}{'P@10':>7}{'R@pool':>8}{'empty':>7}{'junk/q':>8}{'shown':>7}")
+ for k, ms in sorted(rows.items(), key=lambda kv: kv[0] == "ALL"):
+ p = [m[0] for m in ms if m[0] is not None]; r = [m[1] for m in ms if m[1] is not None]
+ print(f"{k:<16}{len(ms):>4}{(st.mean(p) if p else 0):>7.2f}{(st.mean(r) if r else 0):>8.2f}"
+ f"{sum(m[2] for m in ms):>7}{st.mean(m[3] for m in ms):>8.2f}{st.mean(m[4] for m in ms):>7.1f}")
+ return rows
+
+ report(S.REL_MIN, f"FULL SYSTEM (relevance threshold {S.REL_MIN})")
+ for v in ("siglip", "desc", "fulltext", "no_rerank"):
+ allm = [score(runs[(v, q["query"])][:60], q["query"]) for q in qs]
+ p = [m[0] for m in allm if m[0] is not None]; r = [m[1] for m in allm if m[1] is not None]
+ print(f" variant {v:<10} P@10 {st.mean(p) if p else 0:.2f} R@pool {st.mean(r) if r else 0:.2f} junk/q {st.mean(m[3] for m in allm):.2f}")
+ lat.sort()
+ print(f"\nlatency ms (full): p50 {st.median(lat):.0f} p95 {lat[int(0.95 * (len(lat) - 1))]:.0f} max {lat[-1]:.0f}")
+
+ if a.sweep:
+ print("\nthreshold sweep (ALL):")
+ for t in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7):
+ allm = [score(keep(runs[("full", q["query"])], t), q["query"]) for q in qs]
+ p = [m[0] for m in allm if m[0] is not None]; r = [m[1] for m in allm if m[1] is not None]
+ print(f" >= {t:.2f}: P@10 {st.mean(p) if p else 0:.2f} R@pool {st.mean(r) if r else 0:.2f} "
+ f"empty {sum(m[2] for m in allm)} junk/q {st.mean(m[3] for m in allm):.2f}")
+ if a.show_misses:
+ print("\nwrong results shown (grade 0) and relevant photos missed:")
+ for q in qs:
+ res = keep(runs[("full", q["query"])], S.REL_MIN)
+ shown = {x["id"] for x in res}
+ bad = [x["id"] for x in res[:10] if g.get((q["query"], x["id"])) == 0]
+ missed = [iid for (qq, iid), gr in g.items() if qq == q["query"] and gr == 2 and iid not in shown]
+ if bad or missed:
+ print(f" [{q['type']}] {q['query']!r}: {len(bad)} wrong shown, {len(missed)} relevant missed")
+
+
+if __name__ == "__main__":
+ import os, sys
+ main()
+ sys.stdout.flush()
+ os._exit(0) # do not wait for abandoned judge threads

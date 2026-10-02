@@ -1,0 +1,39 @@
+# type | query — our own queries, including ones the user reported. Graded by the judge, no hand labels.
+person | rahul gandhi
+person | mamta
+person | yogi
+person | farah
+person | priyanka gandi
+person | akhilesh
+person | kohli
+person_context | modi in pink jacket
+person_context | akhilesh speaking
+person_context | gadkari at a podium
+person_context | shubman gill celebrating
+scene | flood
+scene | parliament
+scene | cricket team celebrating
+scene | protest with flags on street
+scene | press conference with microphones
+scene | fire at night
+scene | politician addressing a rally
+scene | khan market protest
+attribute | woman in a white saree with microphone
+attribute | man in pink turban
+attribute | red lpg cylinders
+place | airport
+place | high court
+place | stadium
+person | trump
+person | xi jinping
+person | putin
+person | netanyahu
+person | amit shah
+person | imran khan
+person | shehbaz sharif
+person | amitabh bachchan
+person_context | trump speaking at a podium
+person_context | trump and xi together
+person_context | shehbaz sharif with saudi crown prince
+person_context | netanyahu addressing the media
+person_context | amit shah at a rally
