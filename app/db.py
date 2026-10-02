@@ -122,8 +122,14 @@ def flatten_vlm(v: dict | None) -> str:
 
 
 def caption_text(caption, headline, keywords, city, state) -> str:
- """Photographer metadata as searchable text (names included: the caption is evidence of who is there)."""
- return " ".join(x for x in [caption or "", headline or "", " ".join(keywords or []), city or "", state or ""] if x)
+ """Photographer metadata as searchable text (names included: the caption is evidence of who is there),
+ plus the canonical city token so Bangalore/Bengaluru variants match."""
+ from .aliases import canonical_city
+ parts = [caption or "", headline or "", " ".join(keywords or []), city or "", state or ""]
+ canon = canonical_city(" ".join([city or "", caption or ""]))
+ if canon:
+ parts.append(canon)
+ return " ".join(x for x in parts if x)
 
 
 def rebuild_search_text(conn, image_id: str | None = None):

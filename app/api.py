@@ -1,6 +1,7 @@
 """uv run uvicorn app.api:app --port 8000"""
-import time
-from fastapi import FastAPI, Query
+import json, time
+from pathlib import Path
+from fastapi import FastAPI, Query, Body
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from .config import DATA_DIR, THUMB_DIR, ROOT
@@ -23,7 +24,57 @@ def api_search(q: str, limit: int = 60, year_from: int | None = None, year_to: i
  t = time.perf_counter()
  r = S.search(q, limit, year_from, year_to, person, conn=conn, parse=parse)
  r["timings"]["server_ms"] = round((time.perf_counter() - t) * 1000, 1)
+ with (DATA_DIR / "query_log.jsonl").open("a") as f: # real queries are the next eval set
+ f.write(json.dumps({"ts": time.time(), "q": q, "count": r["count"], "matches": r.get("matches"),
+ "ms": r["timings"]["server_ms"], "required": r.get("required")}) + "\n")
  return r
+
+
+@app.post("/api/click")
+def api_click(body: dict = Body(...)):
+ """UI reports which result was opened or downloaded (query, image_id, rank, action)."""
+ with (DATA_DIR / "query_log.jsonl").open("a") as f:
+ f.write(json.dumps({"ts": time.time(), "click": body}) + "\n")
+ return {"ok": True}
+
+
+# ---- human grading of (query, photo) pairs: validates the LLM judge. Pool built by eval/make_grading_pool.py.
+GRADE_POOL = Path(__file__).resolve().parent.parent / "eval" / "grading_pool.jsonl"
+GRADES = DATA_DIR / "human_grades.jsonl"
+
+
+@app.get("/api/grade/next")
+def grade_next(user: str):
+ done = set()
+ if GRADES.exists():
+ for l in GRADES.open():
+ try:
+ g = json.loads(l)
+ if g["user"] == user:
+ done.add((g["query"], g["image_id"]))
+ except Exception:
+ pass
+ pool = [json.loads(l) for l in GRADE_POOL.open()] if GRADE_POOL.exists() else []
+ todo = [p for p in pool if (p["query"], p["image_id"]) not in done]
+ if not todo:
+ return {"done": True, "total": len(pool)}
+ p = todo[0]
+ row = conn.execute("SELECT caption, date_published::date, city FROM images WHERE id = %s", (p["image_id"],)).fetchone()
+ return {"done": False, "left": len(todo), "total": len(pool), "query": p["query"], "image_id": p["image_id"],
+ "thumb": f"/thumbs/{p['image_id']}.jpg", "caption": row[0] if row else None,
+ "date": row[1].isoformat() if row and row[1] else None, "city": row[2] if row else None}
+
+
+@app.post("/api/grade")
+def grade_post(body: dict = Body(...)):
+ with GRADES.open("a") as f:
+ f.write(json.dumps({**body, "ts": time.time()}) + "\n")
+ return {"ok": True}
+
+
+@app.get("/grade")
+def grade_page():
+ return FileResponse(ROOT / "app" / "static" / "grade.html")
 
 
 @app.post("/api/refresh")

@@ -51,7 +51,7 @@ dt{color:var(--muted)}dd{margin:0}
 .empty{padding:60px 20px;color:var(--muted);text-align:center;grid-column:1/-1}
 .x{float:right}
 @media (max-width:900px){aside{position:fixed;inset:auto 0 0 0;width:auto;height:70vh;top:auto;border-top:1px solid var(--line);z-index:9}.bar{width:160px}}
-</style>
+.card.possible{opacity:.75}</style>
 </head>
 <body>
 <header>
@@ -90,11 +90,11 @@ function grid(r){last=r;
  if((r.persons_missing||[]).length) notes.push(`No photos recognised as ${r.persons_missing.map(esc).join(', ')} yet.`);
  const note=notes.map(n=>`<div class="notice">${n}</div>`).join('');
  const chips=x=>x.people.map(p=>`<span class="chip p">${esc(p)}</span>`).join(' ')+(x.people_possible||[]).map(p=>`<span class="chip" title="possible match">${esc(p)}?</span>`).join(' ');
- $('#grid').innerHTML=note+(r.results.length?r.results.map((x,i)=>`<div class="card" data-i="${i}"><img loading="lazy" src="${x.thumb}" alt="">
+ $('#grid').innerHTML=note+(r.results.length?r.results.map((x,i)=>`${x.tier==='possible'&&(i===0||r.results[i-1].tier!=='possible')?'<div class="divider" style="grid-column:1/-1;color:#999;border-top:1px solid #333;padding:8px 0 2px;font-size:13px">Possible matches</div>':''}<div class="card${x.tier==='possible'?' possible':''}" data-i="${i}"><img loading="lazy" src="${x.thumb}" alt="">
  <div class="c"><div class="s">${esc(x.vlm?.summary||x.file)}</div>
  <div class="d"><span>${chips(x)}</span><span>${x.relevance!=null?`<b title="relevance">${Math.round(100*x.relevance)}%</b> · `:''}${x.date||''}</span></div></div></div>`).join('')
  :(note?'':'<div class="empty">No confident matches. Try describing the photo differently.</div>'));}
-$('#grid').onclick=e=>{const c=e.target.closest('.card');if(!c)return;document.querySelectorAll('.card.sel').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');detail(last.results[+c.dataset.i])};
+$('#grid').onclick=e=>{const c=e.target.closest('.card');if(!c)return;document.querySelectorAll('.card.sel').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');const x=last.results[+c.dataset.i];detail(x);fetch('/api/click',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:last.query,image_id:x.id,rank:+c.dataset.i+1,action:'open'})});};
 function list(a){return (a||[]).length?a.map(esc).join(', '):'—'}
 function detail(x){const v=x.vlm||{};
  const boxes=(x.faces||[]).map(f=>{const [bx,by,bw,bh]=f.bbox;return `<div class="box" style="left:${100*bx/x.width}%;top:${100*by/x.height}%;width:${100*bw/x.width}%;height:${100*bh/x.height}%">${f.name?`<em>${esc(f.name)} ${f.score}</em>`:''}</div>`}).join('');

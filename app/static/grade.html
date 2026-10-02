@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Grade photos</title>
+<style>body{font:15px system-ui;margin:0;background:#111;color:#eee}header{padding:12px 16px;background:#1b1b1f;display:flex;gap:16px;align-items:center}
+main{max-width:1100px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:1fr 360px;gap:20px}img{max-width:100%;max-height:70vh;border-radius:6px;background:#000}
+.q{font-size:22px;margin:0 0 10px}.cap{color:#bbb;font-size:14px;margin:8px 0}button{font:16px system-ui;padding:12px;border:0;border-radius:8px;cursor:pointer;width:100%;margin:6px 0;color:#fff}
+.g2{background:#1e8e3e}.g1{background:#b8860b}.g0{background:#b3261e}.skip{background:#444}input{font:15px system-ui;padding:6px;border-radius:6px;border:1px solid #444;background:#222;color:#eee}
+kbd{background:#333;padding:1px 6px;border-radius:4px}</style></head><body>
+<header><b>Grade photos</b><label>Your name <input id="user" placeholder="initials"></label><span id="prog"></span></header>
+<main><div><h1 class="q" id="q"></h1><img id="img" alt=""><div class="cap" id="cap"></div></div>
+<div><p>A journalist searched for the query above. Does this photo satisfy it? Use caption and date as evidence too.</p>
+<button class="g2" onclick="grade(2)"><kbd>1</kbd> Yes, clearly</button><button class="g1" onclick="grade(1)"><kbd>2</kbd> Partly / related</button>
+<button class="g0" onclick="grade(0)"><kbd>3</kbd> No</button><button class="skip" onclick="grade(null)"><kbd>s</kbd> Not sure, skip</button></div></main>
+<script>
+const $=s=>document.querySelector(s);let cur=null;$('#user').value=localStorage.grader||'';
+async function next(){const u=$('#user').value.trim();if(!u){alert('Enter your name first');return}localStorage.grader=u;
+ cur=await (await fetch('/api/grade/next?user='+encodeURIComponent(u))).json();
+ if(cur.done){$('#q').textContent='All done, thank you';$('#img').src='';$('#cap').textContent='';$('#prog').textContent=cur.total+' graded';return}
+ $('#prog').textContent=(cur.total-cur.left+1)+' / '+cur.total;$('#q').textContent='“'+cur.query+'”';$('#img').src=cur.thumb;
+ $('#cap').textContent=[cur.caption?'Caption: '+cur.caption:'(no caption)',cur.date?'Date: '+cur.date:'',cur.city?'City: '+cur.city:''].filter(Boolean).join(' · ');}
+async function grade(g){if(!cur||cur.done)return;await fetch('/api/grade',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({user:$('#user').value.trim(),query:cur.query,image_id:cur.image_id,grade:g})});next();}
+document.onkeydown=e=>{if(e.target.tagName==='INPUT')return;({'1':2,'2':1,'3':0,'s':null})[e.key]!==undefined&&grade(({'1':2,'2':1,'3':0,'s':null})[e.key])};
+$('#user').onchange=next;if($('#user').value)next();
+</script></body></html>

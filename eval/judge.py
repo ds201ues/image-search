@@ -13,7 +13,7 @@ from openai import OpenAI
 from app.config import DATA_DIR, THUMB_DIR, VLM_MODEL, VLM_PRICE_IN, VLM_PRICE_OUT
 from app.vlm import _jpeg_b64
 
-CACHE = Path(__file__).parent / "judgments.jsonl"
+CACHE = Path(__file__).parent / "judgments_v2.jsonl" # v2: judge sees caption + date (v1 image-only: judgments.jsonl)
 BLIND = Path(__file__).parent / "blind_people.jsonl"
 BLIND_PROMPT = """List the well-known public figures (politicians, sportspeople, actors, business leaders, officials)
 you can recognise in this news photo, with confidence 0-1. Only include people you are reasonably sure about.
@@ -24,7 +24,9 @@ BLIND_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["p
  "properties": {"name": {"type": "string"}, "confidence": {"type": "number"}}}}}}
 _blind = None
 PROMPT = """A journalist searched a news photo archive for: "{q}"
-Does this photo satisfy that search? Judge only what is visible (and well-known public figures you recognise).
+Does this photo satisfy that search? Judge what is visible, well-known public figures you recognise, AND the archive's own
+record of the photo below (the photographer's caption and the date are reliable evidence for place, event and time).
+{meta}
 2 = clearly yes: every requested person, scene, object, attribute or place is shown
 1 = partly: related, but a requested element is missing, unclear or only loosely matches
 0 = no
@@ -54,6 +56,21 @@ def _img(file):
  """Judge from the 768px thumbnail when it exists (same pixels the indexer saw, no 12 MB decode)."""
  tp = THUMB_DIR / (Path(str(file)).stem + ".jpg")
  return tp if tp.exists() else DATA_DIR / file
+
+
+_meta = None
+
+
+def photo_meta(iid):
+ """Caption and date from the index, for the judge prompt."""
+ global _meta
+ with _lock:
+ if _meta is None:
+ from app.db import connect
+ _meta = {i: (c, d) for i, c, d in connect().execute("SELECT id, caption, date_published::date FROM images")}
+ c, d = _meta.get(iid, (None, None))
+ lines = [f"Caption: {' '.join(c.split())}" if c else "Caption: (none)", f"Date: {d.isoformat()}" if d else "Date: unknown"]
+ return "\n".join(lines)
 
 
 def _call(text, file, schema, name):
@@ -102,7 +119,7 @@ def _same(a, b):
 def _judge_one(q, iid, file, names=None, ctx=None):
  if names is None and ctx is not None and ctx != q: # no names, but the query carried a year: judge the rest
  q_judge = ctx or q
- out = _call(PROMPT.format(q=q_judge), file, SCHEMA, "judge")
+ out = _call(PROMPT.format(q=q_judge, meta=photo_meta(iid)), file, SCHEMA, "judge")
  with _lock:
  _cache[(q, iid)] = out["grade"]
  with CACHE.open("a") as f:
@@ -115,7 +132,7 @@ def _judge_one(q, iid, file, names=None, ctx=None):
  elif not ctx:
  grade, reason = 2, f"blind ID saw {names}"
  else:
- out = _call(PROMPT.format(q=ctx), file, SCHEMA, "judge")
+ out = _call(PROMPT.format(q=ctx, meta=photo_meta(iid)), file, SCHEMA, "judge")
  grade, reason = out["grade"], f"names ok; context: {out['reason']}"
  with _lock:
  _cache[(q, iid)] = grade
@@ -127,7 +144,7 @@ def _judge_one(q, iid, file, names=None, ctx=None):
  r = _client.chat.completions.create(
  model=VLM_MODEL, reasoning_effort="low",
  messages=[{"role": "user", "content": [
- {"type": "text", "text": PROMPT.format(q=q)},
+ {"type": "text", "text": PROMPT.format(q=q, meta=photo_meta(iid))},
  {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_jpeg_b64(_img(file))}"}}]}],
  response_format={"type": "json_schema", "json_schema": {"name": "judge", "strict": True, "schema": SCHEMA}})
  out = json.loads(r.choices[0].message.content)

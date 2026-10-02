@@ -83,10 +83,38 @@ def main():
  top = shown[:10]
  val = lambda iid: {2: 1.0, 1: 0.5, 0: 0.0}.get(g.get((q, iid)), 0.0)
  relevant_pool = {iid for (qq, iid), gr in g.items() if qq == q and gr == 2}
- p10 = sum(val(x["id"]) for x in top) / len(top) if top else None
+ p10 = sum(val(x["id"]) for x in top) / len(top) if top else (0.0 if relevant_pool else None) # empty with answers = 0
  rec = len(relevant_pool & {x["id"] for x in shown}) / len(relevant_pool) if relevant_pool else None
  junk = sum(1 for x in top if g.get((q, x["id"])) == 0)
  return p10, rec, (not shown and bool(relevant_pool)), junk, len(shown)
+
+ def boot(vals, n=1000, seed=0):
+ """95% bootstrap interval over queries."""
+ import random
+ vals = [v for v in vals if v is not None]
+ if not vals:
+ return (0, 0)
+ rng = random.Random(seed); ms = []
+ for _ in range(n):
+ smp = [vals[rng.randrange(len(vals))] for _ in vals]; ms.append(st.mean(smp))
+ ms.sort(); return (ms[int(0.025 * n)], ms[int(0.975 * n)])
+
+ def known_item(threshold):
+ """Source photo rank for Luna-written queries (judge-free): hit@1/5/10, MRR, never-retrieved."""
+ ranks = []
+ for q in qs:
+ src = q.get("source_image")
+ if not src:
+ continue
+ ids = [x["id"] for x in runs[("full", q["query"])]] # rel_min 0 ranking
+ ranks.append(ids.index(src) + 1 if src in ids else None)
+ if not ranks:
+ return
+ hit = lambda k: sum(1 for r in ranks if r and r <= k) / len(ranks)
+ mrr = st.mean((1 / r) if r else 0 for r in ranks)
+ ci = boot([1.0 if (r and r <= 10) else 0.0 for r in ranks])
+ print(f"known-item ({len(ranks)} generated queries): hit@1 {hit(1):.2f} hit@5 {hit(5):.2f} hit@10 {hit(10):.2f} "
+ f"[95% {ci[0]:.2f}-{ci[1]:.2f}] MRR {mrr:.2f} never retrieved {sum(r is None for r in ranks)}")
 
  def report(threshold, label):
  rows = {}
@@ -99,11 +127,14 @@ def main():
  print(f"{'type':<16}{'n':>4}{'P@10':>7}{'R@pool':>8}{'empty':>7}{'junk/q':>8}{'shown':>7}")
  for k, ms in sorted(rows.items(), key=lambda kv: kv[0] == "ALL"):
  p = [m[0] for m in ms if m[0] is not None]; r = [m[1] for m in ms if m[1] is not None]
+ ci = f" [P@10 95% {boot(p)[0]:.2f}-{boot(p)[1]:.2f}]" if k == "ALL" else ""
  print(f"{k:<16}{len(ms):>4}{(st.mean(p) if p else 0):>7.2f}{(st.mean(r) if r else 0):>8.2f}"
- f"{sum(m[2] for m in ms):>7}{st.mean(m[3] for m in ms):>8.2f}{st.mean(m[4] for m in ms):>7.1f}")
+ f"{sum(m[2] for m in ms):>7}{st.mean(m[3] for m in ms):>8.2f}{st.mean(m[4] for m in ms):>7.1f}{ci}")
  return rows
 
- report(S.REL_MIN, f"FULL SYSTEM (relevance threshold {S.REL_MIN})")
+ report(S.REL_MIN, f"FULL SYSTEM, both tiers (relevance >= {S.REL_MIN})")
+ report(S.TIER_MATCH, f"TOP TIER ONLY (relevance >= {S.TIER_MATCH})")
+ known_item(S.REL_MIN)
  for v in ("siglip", "desc", "fulltext", "no_rerank"):
  allm = [score(runs[(v, q["query"])][:60], q["query"]) for q in qs]
  p = [m[0] for m in allm if m[0] is not None]; r = [m[1] for m in allm if m[1] is not None]
