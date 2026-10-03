@@ -163,6 +163,17 @@ def _date_sql(year_from, year_to):
  return (" AND " + " AND ".join(sql)) if sql else "", args
 
 
+_word_cache = {}
+
+
+def _archive_word(conn, w: str) -> bool:
+ """Does any indexed photo's text use this word? (cached; separates 'cmri' from Hinglish 'sunsaan')"""
+ if w not in _word_cache:
+ _word_cache[w] = conn.execute(f"SELECT EXISTS (SELECT 1 FROM {TABLES['images']} WHERE tsv @@ plainto_tsquery('english', %s))",
+ (w,)).fetchone()[0]
+ return _word_cache[w]
+
+
 def _understand(conn, q, parsed, year_from, year_to, person_ids):
  """Query -> required people, years, the text for recall and stage 2."""
  P = people(conn)
@@ -199,7 +210,10 @@ def _understand(conn, q, parsed, year_from, year_to, person_ids):
  city = parsed.get("city") or ""
  if city and city not in rewrite:
  rewrite += f" in {city}" # the parse drops the city word; stage 2 must still see it
- ctx_rr = " ".join((" ".join(n.lower() for n in names) + " " + rewrite).split()) or ctx
+ # original words the rewrite lost but the archive uses (rare proper nouns like "cmri") come back; Hinglish words do not
+ have = set(rewrite.split()) | {t for n in names for t in norm(n).split()}
+ extra = [w for w in ctx.split() if w not in have and w not in STOP and _archive_word(conn, w)]
+ ctx_rr = " ".join((" ".join(n.lower() for n in names) + " " + rewrite + " " + " ".join(extra)).split()) or ctx
  else:
  ctx_rr = ctx
  if parsed and parsed.get("city") in CITY_ALIASES and parsed["city"] not in ctx_text:

@@ -52,8 +52,8 @@ def doc_text(v: dict | None, caption: str | None = None, date=None, for_embeddin
  return ""
  v = v or {}
  cap = " ".join(caption.split()) if caption else ""
- if len(cap) > 400:
- cap = cap[:400].rsplit(" ", 1)[0] + " …"
+ if len(cap) > 400 and not for_embedding: # stage 2 is cut at 1,500 chars, so a 2,000-char agency caption would hide the description;
+ cap = cap[:400].rsplit(" ", 1)[0] + " …" # the recall vector keeps the full caption (the long ones carry place and event words)
  cap = f"Caption: {cap}. " if cap else ""
  ppl = v.get("people") or []
  people = "; ".join(", ".join(x for x in (p.get("description"), p.get("clothing"), p.get("action")) if x) for p in ppl)

@@ -120,5 +120,6 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
 - BUGFIX round (2026-10-03, paired eval, 208 queries incl. 10 real): richer stage-2 doc (expression/mood/colours/time/date, caption ≤ 400 chars) +
  clean English Jev query. Result: no clear change overall (P@10 0.78→0.79 [−0.00,+0.03]); hinglish top tier +0.11, real nDCG 0.88→0.95,
  person_context +0.04; known-item hit@10 0.79→0.75, never retrieved 16→19 (the longer text dilutes the bge-small recall vector).
- Follow-up: embed a compact doc (no colours/time/date) for recall, keep the rich doc for Jev — measured below.
+ Follow-up 1 (compact recall doc without colours/time/date): no recovery (hit@10 0.74, never retrieved 20) → not the cause. Follow-up 2: full caption in
+ the recall text (the 400-char cap was new) and stage-2 query keeps original words the archive uses (place P@10 had dropped 6–10) — measured below.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
