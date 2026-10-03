@@ -32,3 +32,13 @@ Best fit: **cross-encoder/ettin-reranker-17m-v1 / 32m-v1 / 68m-v1** (May 2026, A
 Also: Alibaba-NLP/gte-reranker-modernbert-base (3 s, offline ceiling). Hosted: Voyage rerank-3-lite ~$0.8 per 1k queries.
 Embedders: **ibm-granite/granite-embedding-small-english-r2** (384-d drop-in, claims +5 BEIR), **Qwen/Qwen3-Embedding-0.6B** truncated to 384 (quality ceiling, ~20× encode cost, knows names).
 LLM as live reranker: +0.9 s p50 at best in production (Intercom); use as judge/teacher, not live.
+
+## 4. Commercial / closed alternatives (2026-10-03)
+No vendor publishes accuracy for news-archive photo search with short named queries. Cloud vectors: Gemini Embedding 2 (MSCOCO R@1 62.9 self-reported;
+independent image→image R@1 43.8 vs SigLIP2-so400m 43.4), Vertex multimodalembedding@001 (retires 2027-04), Amazon Nova MME (US-East only),
+Azure AI Vision (retires 2028-09), Cohere Embed 5 (self-hostable), Voyage multimodal-3.5, Jina v4 (non-commercial). Index cost $0.06–0.35 per 1k photos,
+queries ≈ $0; none names people or reads captions. People: Google Vision celebrity recognition shut down 2025-09; Azure face gated; AWS Rekognition
+$1/1k calls, celebrity coverage of Indian figures unpublished, documented lookalike errors, trains on customer photos unless opted out.
+Turnkey DAMs (MerlinOne NOMAD/AP, Orange Logic, Bynder=Bedrock+Rekognition, Canto, PhotoShelter, Adobe AEM, Fotoware, Perfect Memory, Veritone, Dalet):
+no published precision/recall; one independent NOMAD review found named-person searches failing; prices five figures/year up. Direct benchmark plan:
+Gemini Embedding 2 (~$0.5) + Voyage/Nova (~$0.5) + Rekognition celebrities+labels on 5k ($10, opt-out first) on our 198 queries, pooled judging ~$2.
