@@ -112,5 +112,6 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  similarity to the crops Luna saw (full ≥ 0.55, fading to 0.40, none below). v2 result: confident-name photos 12,570 (vs 12,253 without, 12,605 v1), uncaptioned photos with a name 1,724 (vs 1,303),
  photo-level agreement with single-face caption names 62% (v1 row-level 9%). Remaining disagreements are the long tail: foreign sportspeople Luna
  confuses (James Blake/Tsonga, Murray/Djokovic, Chappell/Waugh), spelling variants (Stan/Stanislas Wawrinka) and some caption noise; the popular
- Indian figures agree. ADOPTED (cluster_vlm evidence, $0.85 one-off, cached).
+ Indian figures agree. Eval at weight 0.9: person P@10 unchanged (0.80/0.88) but person_context 0.66→0.54, ALL 0.79→0.77: a lone cluster name at conf 0.99 counted as
+ "sure" (0.89) despite 62% agreement. Weight lowered to 0.6 (lone cluster name = "possible", needs a second source to be sure); re-measured below.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

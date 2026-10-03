@@ -175,7 +175,7 @@ GALLERY_SURE = 0.55 # above this no margin is needed
 CAPTION_ASSIGN_SIM = 0.30 # caption names one person, several faces: the face closest to that person's references (and this close) is theirs
 REF_OUTLIER_SIM = 0.20 # a reference that resembles none of its person's other references (3+ refs) is a mislabelled face
 CLUSTER_VLM_MIN = 0.6 # Luna naming a face cluster (2-3 crops side by side) counts as evidence above this confidence
-CLUSTER_VLM_WEIGHT = 0.9
+CLUSTER_VLM_WEIGHT = 0.6 # alone this makes a person "possible" (>= 0.5), never "sure": 62% agreement with captions (E14)
 CLUSTER_VLM_FULL = 0.55 # a face at least this similar to the crops Luna saw gets the full weight ...
 CLUSTER_VLM_FLOOR = 0.40 # ... fading to half weight here; below it the name does not propagate (clusters can chain two people)
 
