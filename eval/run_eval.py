@@ -45,7 +45,10 @@ def main():
  ap = argparse.ArgumentParser()
  ap.add_argument("--sweep", action="store_true"); ap.add_argument("--show-misses", action="store_true")
  ap.add_argument("--label", default=None, help="save per-query metrics to eval/runs/<label>.json for paired comparison (eval/compare.py)")
+ ap.add_argument("--images-table", default=None, help="evaluate against an experiment copy of the images table (sets app.search.TABLES['images'])")
  a = ap.parse_args()
+ if a.images_table:
+ S.TABLES["images"] = a.images_table
  conn = connect(); S.PARSE_TIMEOUT_MS = 60000 # the eval measures quality: always wait for the parse (latency is measured separately)
  S.search("warm up", conn=conn)
  files = dict(conn.execute("SELECT id, file FROM images"))
