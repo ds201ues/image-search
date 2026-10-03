@@ -109,5 +109,8 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  12,253→12,605, uncaptioned photos with a name 1,303→1,736, BUT only 45% of named clusters agreed with their single-face caption names: (a) spelling
  duplicates in the directory ("A. Revanth Reddy" vs "Revanth Reddy"), (b) chained clusters mixing people who appear together (Nitish Kumar /
  Sushil Kumar Modi, Siddaramaiah / D. K. Shivakumar). Fix: match Luna's name to the directory (link_name) and propagate per face weighted by
- similarity to the crops Luna saw (full ≥ 0.55, fading to 0.40, none below). Re-measured below.
+ similarity to the crops Luna saw (full ≥ 0.55, fading to 0.40, none below). v2 result: confident-name photos 12,570 (vs 12,253 without, 12,605 v1), uncaptioned photos with a name 1,724 (vs 1,303),
+ photo-level agreement with single-face caption names 62% (v1 row-level 9%). Remaining disagreements are the long tail: foreign sportspeople Luna
+ confuses (James Blake/Tsonga, Murray/Djokovic, Chappell/Waugh), spelling variants (Stan/Stanislas Wawrinka) and some caption noise; the popular
+ Indian figures agree. ADOPTED (cluster_vlm evidence, $0.85 one-off, cached).
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
