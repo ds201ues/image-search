@@ -318,7 +318,9 @@ Same 198 queries, same v2 judge.
 Precision and junk held at 6.7× the data while showing twice as many results per query (17 vs 9). Known-item rank fell as expected:
 the queries were written from one photo, and the bigger archive now holds several equally valid photos per query, so "the" source photo
 ranks lower; 17 source photos never enter the 150 candidates (recall ceiling to investigate per source). Latency stays near the 1 s target.
-People index at 33k: 78,970 faces, 2,886 clusters spanning 2+ photos (largest 221), 12,253 photos with a confident name (36%).
+People index at 33k: 78,970 faces, 2,886 clusters spanning 2+ photos (largest 221). After the face work (margin rule, caption-conditioned assignment,
+reference cleaning, Luna cluster naming at weight 0.6, see EXPERIMENTS.md E13/E14): 12,331 photos with a confident name (37%), 1,475 uncaptioned
+photos with a named person (was 1,303), named faces at ~85% precision. Search metrics unchanged within noise (ALL P@10 0.77 vs 0.79).
 
 ### Open
 1. Human check of the judge: 2 journalists × 300 pairs at /grade (pool built); real query log → next eval set.
