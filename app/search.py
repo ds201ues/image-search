@@ -196,6 +196,9 @@ def _understand(conn, q, parsed, year_from, year_to, person_ids):
  rewrite = norm(re.sub(YEAR_RE, "", parsed["search_text"]))
  for n in names:
  rewrite = rewrite.replace(norm(n), " ")
+ city = parsed.get("city") or ""
+ if city and city not in rewrite:
+ rewrite += f" in {city}" # the parse drops the city word; stage 2 must still see it
  ctx_rr = " ".join((" ".join(n.lower() for n in names) + " " + rewrite).split()) or ctx
  else:
  ctx_rr = ctx
