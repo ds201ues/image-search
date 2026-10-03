@@ -57,3 +57,6 @@ covers state assemblies by construction; "kisan andolan" → event protest + act
  (did the concept now appear?), hallucination check: 100 random photos, human marks symbols/landmarks/roles that are wrong.
 3. Paired eval vs the current system on the same queries. Keep if the real/scene slices improve or the concept-miss count falls, with no rise in wrong
  symbols/landmarks. Token cost per photo must stay under +40%.
+
+## Result (2026-10-03)
+See EXPERIMENTS.md E15. Coverage gains on roles/settings/sport; no measurable search change on the current eval; +27% cost; human check pending.

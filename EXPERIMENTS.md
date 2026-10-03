@@ -128,4 +128,9 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  bug fixes. Root cause: a race in search() (parse thread vs first recall pass) made every eval run nondeterministic (±3–5 known-item points);
  fixed 2026-10-03 (cached parse applied synchronously; eval waits for the parse). FINAL for this round: rich stage-2 document kept
  ("yogi laughing" 0 → 10 results, real-query nDCG 0.88 → 0.95 in every run); recall text and stage-2 query as before the round.
-- E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
+- E15 taxonomy prompt v2 (2026-10-03, 2,340 photos incl. all eval source photos, $0.59): concept coverage vs captions improved where the taxonomy
+ has a slot (minister 7→47%, match 60→86%, stadium 33→49%, college 20→40%, hospital 42→54%) and not where knowledge is non-visual (party, court,
+ government: unchanged, correctly left to captions). Search eval (paired, deterministic): no clear change (P@10 0.80→0.80, top tier 0.82→0.80
+ [−0.05,+0.01], known-item hit@1 0.51→0.54, never retrieved 19→24) — the eval cannot see it: 7% of photos changed and the queries come from v1 text.
+ Cost $0.25/1k vs $0.20 (+27%, prompt twice as long). NOT adopted into the live index; candidate schema for the 10M backfill pending a human
+ hallucination check (100-photo pool at /grade) and real-query evidence. exp/taxonomy/, app/vlm_v2.py, eval/tax_*_report.txt before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
