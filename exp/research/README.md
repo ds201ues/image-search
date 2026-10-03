@@ -42,3 +42,19 @@ $1/1k calls, celebrity coverage of Indian figures unpublished, documented lookal
 Turnkey DAMs (MerlinOne NOMAD/AP, Orange Logic, Bynder=Bedrock+Rekognition, Canto, PhotoShelter, Adobe AEM, Fotoware, Perfect Memory, Veritone, Dalet):
 no published precision/recall; one independent NOMAD review found named-person searches failing; prices five figures/year up. Direct benchmark plan:
 Gemini Embedding 2 (~$0.5) + Voyage/Nova (~$0.5) + Rekognition celebrities+labels on 5k ($10, opt-out first) on our 198 queries, pooled judging ~$2.
+
+## 5. Search-quality review #2 (2026-10-03, read-only diagnosis on the 33k eval)
+Loss budget: P@10 0.78 → 0.14 lost to "partly" results (mostly over-specific Luna-written queries), 0.05 to wrong results (29 in all top-10s, 3 in the top tier).
+Wrong-result causes: judge name check exact-token (~8: "Inácio"/"Inacio", "Rajasekara"), stage 2 lenient on event/place (~9), attribute bound to the wrong
+person (4, "modi in pink jacket" = woman's sari), weak lone person evidence (5), caption names someone not visible (2).
+Missed relevant (171): stage 2 scored < 0.1 (142, 83%: Jev literal — "parliament" rejects "legislative assembly", "arriving" vs "arrive"; ~10 description
+wrong/missing: EVMs as "plastic cases", Bihar Assembly as "Navi Mumbai"), never a candidate (21), people evidence missing (8). Jev AUC 0.991: accurate but literal.
+Oracle reordering of the judged pool: P@10 0.78 → 0.87; person_context 0.58 → 0.80. Known-item: 470 relevant + 106 PARTIAL photos outrank the source.
+Bugs: doc_text drops expression/mood/colours/time/date ("smiling" in 8,650 Luna outputs, 2,772 doc_texts; real log "yogi laughing" → 0 results);
+Jev reads a garbled union string for Hinglish/names ("h d h. d. kumaraswamy party workers ko wave waving"). Full-text has no IDF ("CMRI" in 2 docs ranks 789th).
+Metric gaps: P@10 over shown not /10; pool variants all multiply by person evidence; broad queries capped at 150 (557 "flood" docs); persons aliases empty
+(MS Dhoni 64 / Mahendra Singh Dhoni 48 / M. S. Dhoni 3).
+Ranked: (1) fix stage-2 inputs (doc_text fields + clean English query), (0) eval fixes (alias-aware name check, P@10/10 + nDCG, person-agnostic pool, broad
+real-log queries, paired bootstrap), (2) learned fusion over strict+lenient Jev, SigLIP cosine, BM25, ranks, person evidence, (3) recall repairs (BM25/IDF,
+person-scoped recall, unconfirmed-person tier), (5) persons canonicalisation + aliases + parse "depicted vs topic", (4) async pixel re-check with a non-Luna
+model, (6) targeted re-description where caption and description conflict, (7) deeper candidates + pagination + dedup for broad queries.
