@@ -174,6 +174,8 @@ GALLERY_MARGIN = 0.15 # ... if it also beats the best reference of any OTHER per
 GALLERY_SURE = 0.55 # above this no margin is needed
 CAPTION_ASSIGN_SIM = 0.30 # caption names one person, several faces: the face closest to that person's references (and this close) is theirs
 REF_OUTLIER_SIM = 0.20 # a reference that resembles none of its person's other references (3+ refs) is a mislabelled face
+CLUSTER_VLM_MIN = 0.6 # Luna naming a face cluster (2-3 crops side by side) counts as evidence above this confidence
+CLUSTER_VLM_WEIGHT = 0.9
 
 
 def step_text(conn, batch=64):
@@ -323,6 +325,37 @@ def step_people(conn):
  score = min(0.99, v / denom) * (1 if v >= 2 * runner else 0.5)
  rows.append((iid, pid, score))
  labels[fid] = (pid, score)
+ # Luna names whole clusters from their clearest faces (independent evidence, cached)
+ from .cluster_names import name_clusters, spent as cl_spent
+ multi = {cid: mem for cid, mem in members.items() if len({i for _, i in mem}) >= 2}
+ fmeta = {fid: (iid, bbox, w, sc) for fid, iid, bbox, w, sc in conn.execute(
+ "SELECT f.id, f.image_id, f.bbox, i.width, f.det_score FROM faces f JOIN images i ON i.id = f.image_id WHERE f.cluster_id = ANY(%s)",
+ (list(multi),))}
+ chosen = {}
+ for cid, mem in multi.items():
+ seen, picks = set(), []
+ for fid, _ in sorted(mem, key=lambda x: -(min(fmeta[x[0]][1][2], fmeta[x[0]][1][3]) * fmeta[x[0]][3])): # big, confident faces first
+ iid, bbox, w, _ = fmeta[fid]
+ if iid in seen:
+ continue
+ seen.add(iid); picks.append((fid, iid, bbox, w))
+ if len(picks) == 3:
+ break
+ chosen[cid] = picks
+ named = name_clusters(chosen)
+ cl_rows = []
+ for cid, (name, conf) in named.items():
+ if not name or conf < CLUSTER_VLM_MIN:
+ continue
+ pid = conn.execute("""INSERT INTO persons (name) VALUES (%s) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+ RETURNING id""", (name,)).fetchone()[0]
+ for iid in {i for _, i in multi[cid]}:
+ cl_rows.append((iid, pid, round(CLUSTER_VLM_WEIGHT * conf, 3)))
+ with conn.cursor() as cur:
+ cur.executemany("INSERT INTO image_persons VALUES (%s, %s, 'cluster_vlm', %s) ON CONFLICT DO NOTHING", cl_rows)
+ print(f" cluster naming: {len(multi)} clusters asked ({cl_spent['calls']} new calls, ${cl_spent['usd']:.3f}), "
+ f"{sum(1 for n, c in named.values() if n and c >= CLUSTER_VLM_MIN)} named, {len(cl_rows)} photo-person rows")
+
  # one row per (image, person): keep the strongest face
  best = {}
  for iid, pid, sc in rows:
