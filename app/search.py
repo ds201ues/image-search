@@ -201,23 +201,9 @@ def _understand(conn, q, parsed, year_from, year_to, person_ids):
  ctx = " ".join(ctx.split())
  expansions = " ".join(parsed.get("expansions") or []) if parsed else ""
  ctx_text = expand_cities((ctx + " " + expansions).strip()) # word matching gets synonyms + city variants
- # stage 2 reads a clean English sentence: required people by canonical name + the parse's rewrite (no Hinglish/union noise)
- if parsed and parsed.get("search_text"):
- names = [P.names[p] for p, _, _ in strong]
- rewrite = norm(re.sub(YEAR_RE, "", parsed["search_text"]))
- for n in names:
- rewrite = rewrite.replace(norm(n), " ")
- city = parsed.get("city") or ""
- if city and city not in rewrite:
- rewrite += f" in {city}" # the parse drops the city word; stage 2 must still see it
- # original words the rewrite lost but the archive uses (rare proper nouns like "cmri") come back; Hinglish words do not
- have = set(rewrite.split()) | {t for n in names for t in norm(n).split()}
- extra = [w for w in ctx.split() if w not in have and w not in STOP and _archive_word(conn, w)]
- ctx_rr = " ".join((" ".join(n.lower() for n in names) + " " + rewrite + " " + " ".join(extra)).split()) or ctx
- else:
+ # stage 2 reads the same text as recall (the union of original words and the parse's rewrite). A "clean English" variant
+ # (canonical names + rewrite + archive-known words) was measured 2026-10-03: no gain, place queries -5 to -6 points; not used.
  ctx_rr = ctx
- if parsed and parsed.get("city") in CITY_ALIASES and parsed["city"] not in ctx_text:
- ctx_text += " " + " ".join(CITY_ALIASES[parsed["city"]])
  return dict(q_eff=q_eff, links=links, strong=strong, pids=[p for p, _, _ in links], year_from=year_from, year_to=year_to,
  ctx=ctx, ctx_text=ctx_text, ctx_rr=ctx_rr)
 

@@ -121,5 +121,8 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  clean English Jev query. Result: no clear change overall (P@10 0.78→0.79 [−0.00,+0.03]); hinglish top tier +0.11, real nDCG 0.88→0.95,
  person_context +0.04; known-item hit@10 0.79→0.75, never retrieved 16→19 (the longer text dilutes the bge-small recall vector).
  Follow-up 1 (compact recall doc without colours/time/date): no recovery (hit@10 0.74, never retrieved 20) → not the cause. Follow-up 2: full caption in
- the recall text (the 400-char cap was new) and stage-2 query keeps original words the archive uses (place P@10 had dropped 6–10) — measured below.
+ the recall text (the 400-char cap was new) and stage-2 query keeps original words the archive uses (place P@10 had dropped 6–10). v3 result: still no clear change (P@10 0.78→0.79), P@10/10
+ formally WORSE (−0.01), known-item hit@10 0.79→0.75 in all three variants, place −5 every time; real-log queries better every time (nDCG 0.88→0.95).
+ DECISION: keep only the richer stage-2 document (fixes "yogi laughing"-type misses); revert the recall-vector text to the pre-round document and
+ revert the clean stage-2 query. Confirmation run: after_bugfix_v4.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).

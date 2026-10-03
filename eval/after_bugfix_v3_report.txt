@@ -1,0 +1,33 @@
+judged pairs: 9896 (new judging cost $0.022 over 149 calls)
+
+FULL SYSTEM, both tiers (relevance >= 0.1)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.80 0.64 0.92 0.87 1 0.21 25.3
+person_context 29 0.67 0.21 0.58 0.87 2 0.52 3.6
+scene 65 0.80 0.58 0.74 0.85 1 0.00 25.0
+attribute 19 0.84 0.59 0.79 0.91 0 0.11 22.4
+place 23 0.81 0.58 0.73 0.88 1 0.13 18.3
+event_year 27 0.83 0.21 0.60 0.91 1 0.11 3.3
+hinglish 16 0.79 0.46 0.80 0.88 0 0.00 14.9
+real 10 0.78 0.77 0.95 0.97 0 0.70 27.2
+ALL 208 0.79 0.50 0.74 0.88 6 0.16 17.6 [P@10 95% 0.76-0.83]
+
+TOP TIER ONLY (relevance >= 0.5)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.94 0.66 0.87 0.78 1 0.00 22.4
+person_context 29 0.70 0.16 0.46 0.71 3 0.10 1.4
+scene 65 0.86 0.44 0.56 0.62 5 0.00 13.5
+attribute 19 0.93 0.43 0.64 0.62 0 0.00 6.1
+place 23 0.80 0.44 0.55 0.55 4 0.00 9.8
+event_year 27 0.79 0.11 0.42 0.63 4 0.00 1.2
+hinglish 16 0.68 0.14 0.42 0.44 4 0.00 2.5
+real 10 0.82 0.62 0.77 0.64 1 0.00 12.7
+ALL 208 0.82 0.37 0.56 0.62 22 0.01 9.1 [P@10 95% 0.78-0.87]
+known-item (160 generated queries): hit@1 0.51 hit@5 0.69 hit@10 0.75 [95% 0.68-0.82] MRR 0.60 never retrieved 18
+saved eval/runs/after_bugfix_v3.json
+ variant siglip P@10 0.53 R@pool 0.69 junk/q 2.31
+ variant desc P@10 0.56 R@pool 0.80 junk/q 2.11
+ variant fulltext P@10 0.48 R@pool 0.68 junk/q 2.97
+ variant no_rerank P@10 0.55 R@pool 0.92 junk/q 2.18
+
+latency ms (full): p50 701 p95 1147 max 1631

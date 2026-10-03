@@ -46,8 +46,8 @@ def rerank(q: str, docs: list[str]) -> np.ndarray:
 
 def doc_text(v: dict | None, caption: str | None = None, date=None, for_embedding: bool = False) -> str:
  """What stage 2 reads: photographer caption (capped), then the VLM description including expression, mood, colours, time of day
- and the archive date (month) so date-worded queries can match. for_embedding=True drops colours/time/date: the small description
- vector is for meaning recall and those lines dilute it (measured: known-item hit@10 0.79 -> 0.75 with them in)."""
+ and the archive date (month) so date-worded queries can match. for_embedding=True returns the pre-2026-10-03 document (full caption,
+ no expression/mood/colours/time/date): every richer variant of the recall vector lowered known-item hit@10 0.79 -> 0.75 (EXPERIMENTS.md)."""
  if not v and not caption:
  return ""
  v = v or {}
@@ -60,8 +60,8 @@ def doc_text(v: dict | None, caption: str | None = None, date=None, for_embeddin
  expr = ", ".join(sorted({p.get("expression", "").strip().lower() for p in ppl if p.get("expression")}))
  parts = [v.get("summary", ""),
  f"People: {people}." if people else "",
- f"Expression: {expr}." if expr else "",
- f"Mood: {v.get('mood')}." if v.get("mood") else "",
+ f"Expression: {expr}." if expr and not for_embedding else "",
+ f"Mood: {v.get('mood')}." if v.get("mood") and not for_embedding else "",
  f"Place: {v.get('place_type', '')} {v.get('location_guess', '')}.",
  f"Event: {v.get('event_type', '')}." if v.get("event_type") else "",
  f"Activities: {', '.join(v.get('activities') or [])}." if v.get("activities") else "",
