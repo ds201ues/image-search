@@ -252,11 +252,11 @@ def _recall(conn, U, use):
  col = {"settings": "vlm->>'setting'", "sport": "vlm->>'sport'", "occasion": "vlm->>'occasion'", "landmark": "vlm->>'landmark'"}
  for k, vals in F.items():
  if k == "actor_roles":
- conds.append("(SELECT count(*) FROM jsonb_array_elements_text(vlm->'actor_roles') r WHERE r = ANY(%s)) > 0"); args.append(vals)
+ conds.append("(SELECT count(*) FROM jsonb_array_elements_text(vlm->'actor_roles') r WHERE r = ANY(%s::text[])) > 0"); args.append(vals)
  elif k == "event_types":
- conds.append("(vlm->>'event_type' = ANY(%s) OR vlm->>'event_type_secondary' = ANY(%s))"); args += [vals, vals]
+ conds.append("(vlm->>'event_type' = ANY(%s::text[]) OR vlm->>'event_type_secondary' = ANY(%s::text[]))"); args += [vals, vals]
  else:
- conds.append(f"{col[k]} = ANY(%s)"); args.append(vals)
+ conds.append(f"{col[k]} = ANY(%s::text[])"); args.append(vals)
  score = " + ".join(f"({c})::int" for c in conds)
  add("concept", [r[0] for r in conn.execute(f"""
  SELECT id FROM {TABLES['images']} i WHERE vlm ? 'event_type' AND ({' OR '.join(conds)}) {dsql}
