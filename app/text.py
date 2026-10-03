@@ -44,9 +44,10 @@ def rerank(q: str, docs: list[str]) -> np.ndarray:
  return 1 / (1 + np.exp(-np.asarray(logits, dtype=np.float32)))
 
 
-def doc_text(v: dict | None, caption: str | None = None, date=None) -> str:
- """What stage 2 and the description embedding read: photographer caption (capped), then the VLM description including
- expression, mood, colours, time of day, and the archive date (month) so date-worded queries ("during pandemic", "2019") can match."""
+def doc_text(v: dict | None, caption: str | None = None, date=None, for_embedding: bool = False) -> str:
+ """What stage 2 reads: photographer caption (capped), then the VLM description including expression, mood, colours, time of day
+ and the archive date (month) so date-worded queries can match. for_embedding=True drops colours/time/date: the small description
+ vector is for meaning recall and those lines dilute it (measured: known-item hit@10 0.79 -> 0.75 with them in)."""
  if not v and not caption:
  return ""
  v = v or {}
@@ -66,9 +67,9 @@ def doc_text(v: dict | None, caption: str | None = None, date=None) -> str:
  f"Activities: {', '.join(v.get('activities') or [])}." if v.get("activities") else "",
  f"Objects: {', '.join(v.get('objects') or [])}." if v.get("objects") else "",
  f"Landmarks: {', '.join(v.get('landmarks') or [])}." if v.get("landmarks") else "",
- f"Colours: {', '.join(v.get('dominant_colors') or [])}." if v.get("dominant_colors") else "",
- f"Time: {v.get('time_of_day').replace('_', ' ')}." if v.get("time_of_day") and v.get("time_of_day") != "unknown" else "",
- f"Date: {date.strftime('%Y-%m') if hasattr(date, 'strftime') else date}." if date else "",
+ f"Colours: {', '.join(v.get('dominant_colors') or [])}." if v.get("dominant_colors") and not for_embedding else "",
+ f"Time: {v.get('time_of_day').replace('_', ' ')}." if v.get("time_of_day") and v.get("time_of_day") != "unknown" and not for_embedding else "",
+ f"Date: {date.strftime('%Y-%m') if hasattr(date, 'strftime') else date}." if date and not for_embedding else "",
  f"Text in image: {', '.join(v.get('visible_text') or [])}." if v.get("visible_text") else "",
  f"Type: {v.get('image_type', '')}."]
  return cap + " ".join(p for p in parts if p.strip())

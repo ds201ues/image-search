@@ -187,8 +187,8 @@ def step_text(conn, batch=64):
  def run():
  for i in range(0, len(todo), batch):
  chunk = todo[i:i + batch]
- docs = [doc_text(v, c, d) for _, v, c, d in chunk]
- vecs = embed_docs(docs)
+ docs = [doc_text(v, c, d) for _, v, c, d in chunk] # stage 2 reads this
+ vecs = embed_docs([doc_text(v, c, d, for_embedding=True) for _, v, c, d in chunk]) # recall vector from the compact text
  with conn.cursor() as cur:
  cur.executemany("UPDATE images SET doc_text = %s, desc_emb = %s WHERE id = %s",
  [(d, e, iid) for (iid, _, _, _), d, e in zip(chunk, docs, vecs)])
