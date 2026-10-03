@@ -4,6 +4,7 @@ expansions. Cached per query in data/query_parses.jsonl (p50 ~2 s uncached, so t
 import json, threading, time
 from openai import OpenAI
 from .config import DATA_DIR, VLM_MODEL, VLM_PRICE_IN, VLM_PRICE_OUT
+from .vlm_v2 import EVENT, SETTING, ROLE, SPORT, OCCASION, LANDMARK
 
 CACHE = DATA_DIR / "query_parses.jsonl"
 _lock = threading.Lock()
@@ -31,16 +32,27 @@ Return:
  nicknames to full names, fix misspellings, drop the year and the city word (they are handled separately), keep everything else.
  Keep it short (2-10 words). Do not add facts that are not in the query.
 - expansions: 3-6 extra English search words or synonyms a description might use instead (e.g. rally → gathering, crowd, demonstration).
+- Taxonomy facets the photo would be classified with (ONLY when the query clearly implies them; empty lists / "none" otherwise):
+ event_types (0-2 from: {events}); settings (0-2 from: {settings}); actor_roles (0-3 from: {roles});
+ sport (one of: {sports}); occasion (one of: {occasions}); landmark (one of: {landmarks}).
+ "parliament" → settings [legislature_or_assembly]; "kisan andolan" → event_types [protest_or_demonstration], actor_roles [farmer];
+ "cm inaugurating metro" → event_types [inauguration_or_launch], actor_roles [politician_or_minister].
 Query: "{q}"
 """
 SCHEMA = {"type": "object", "additionalProperties": False,
- "required": ["people", "city", "year_from", "year_to", "event", "visual", "search_text", "expansions"],
+ "required": ["people", "city", "year_from", "year_to", "event", "visual", "search_text", "expansions",
+ "event_types", "settings", "actor_roles", "sport", "occasion", "landmark"],
  "properties": {
  "people": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["name", "surface"],
  "properties": {"name": {"type": "string"}, "surface": {"type": "string"}}}},
  "city": {"type": "string"}, "year_from": {"type": "integer"}, "year_to": {"type": "integer"},
  "event": {"type": "string"}, "visual": {"type": "string"}, "search_text": {"type": "string"},
- "expansions": {"type": "array", "items": {"type": "string"}}}}
+ "expansions": {"type": "array", "items": {"type": "string"}},
+ "event_types": {"type": "array", "items": {"type": "string", "enum": EVENT}},
+ "settings": {"type": "array", "items": {"type": "string", "enum": SETTING}},
+ "actor_roles": {"type": "array", "items": {"type": "string", "enum": ROLE}},
+ "sport": {"type": "string", "enum": SPORT}, "occasion": {"type": "string", "enum": OCCASION},
+ "landmark": {"type": "string", "enum": LANDMARK}}}
 
 
 def _load():
@@ -51,7 +63,9 @@ def _load():
  if CACHE.exists():
  for l in CACHE.open():
  try:
- r = json.loads(l); _cache[r["query"]] = r["parsed"]
+ r = json.loads(l)
+ if "event_types" in r["parsed"]: # v2 parses only; older entries are re-parsed once
+ _cache[r["query"]] = r["parsed"]
  except (json.JSONDecodeError, KeyError):
  pass
  return _cache
@@ -76,12 +90,14 @@ def parse(q: str) -> dict:
  _client = _client or OpenAI(timeout=20, max_retries=1)
  r = _client.chat.completions.create(
  model=VLM_MODEL, reasoning_effort="low",
- messages=[{"role": "user", "content": PROMPT.format(q=key, cities=", ".join(KNOWN_CITIES))}],
+ messages=[{"role": "user", "content": PROMPT.format(q=key, cities=", ".join(KNOWN_CITIES), events=", ".join(EVENT), settings=", ".join(SETTING),
+ roles=", ".join(ROLE), sports=", ".join(SPORT), occasions=", ".join(OCCASION), landmarks=", ".join(LANDMARK))}],
  response_format={"type": "json_schema", "json_schema": {"name": "parse", "strict": True, "schema": SCHEMA}})
  out = json.loads(r.choices[0].message.content)
  except Exception as e:
- return {"people": [], "city": "", "year_from": 0, "year_to": 0, "event": "", "visual": "", "search_text": "",
- "expansions": [], "_ms": round((time.perf_counter() - t) * 1000), "error": str(e)[:120]}
+ return {"people": [], "city": "", "year_from": 0, "year_to": 0, "event": "", "visual": "", "search_text": "", "expansions": [],
+ "event_types": [], "settings": [], "actor_roles": [], "sport": "none", "occasion": "none_or_unknown", "landmark": "none",
+ "_ms": round((time.perf_counter() - t) * 1000), "error": str(e)[:120]}
  out["city"] = out["city"].lower().strip()
  out["_ms"] = round((time.perf_counter() - t) * 1000)
  with _lock:

@@ -204,8 +204,18 @@ def _understand(conn, q, parsed, year_from, year_to, person_ids):
  # stage 2 reads the same text as recall (the union of original words and the parse's rewrite). A "clean English" variant
  # (canonical names + rewrite + archive-known words) was measured 2026-10-03: no gain, place queries -5 to -6 points; not used.
  ctx_rr = ctx
+ facets = {}
+ if parsed:
+ skip = {"", "none", "none_or_unknown", "other", "other_sport"}
+ for k in ("event_types", "settings", "actor_roles"):
+ vals = [x for x in (parsed.get(k) or []) if x not in skip]
+ if vals:
+ facets[k] = vals
+ for k in ("sport", "occasion", "landmark"):
+ if parsed.get(k) and parsed[k] not in skip:
+ facets[k] = [parsed[k]]
  return dict(q_eff=q_eff, links=links, strong=strong, pids=[p for p, _, _ in links], year_from=year_from, year_to=year_to,
- ctx=ctx, ctx_text=ctx_text, ctx_rr=ctx_rr)
+ ctx=ctx, ctx_text=ctx_text, ctx_rr=ctx_rr, facets=facets)
 
 
 def _recall(conn, U, use):
@@ -236,13 +246,28 @@ def _recall(conn, U, use):
  WITH q AS (SELECT to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', %s)), ' | ')) q)
  SELECT id FROM {TABLES['images']} i, q WHERE q.q IS NOT NULL AND tsv @@ q.q {dsql}
  ORDER BY ts_rank_cd(tsv, q.q, 32) DESC LIMIT {POOL}""", (U["ctx_text"], *dargs))])
+ if "concept" in use and U.get("facets"):
+ # photos whose taxonomy labels match the query's facets; more matched facets rank higher (ties: newest first)
+ F = U["facets"]; conds, args = [], []
+ col = {"settings": "vlm->>'setting'", "sport": "vlm->>'sport'", "occasion": "vlm->>'occasion'", "landmark": "vlm->>'landmark'"}
+ for k, vals in F.items():
+ if k == "actor_roles":
+ conds.append("(SELECT count(*) FROM jsonb_array_elements_text(vlm->'actor_roles') r WHERE r = ANY(%s)) > 0"); args.append(vals)
+ elif k == "event_types":
+ conds.append("(vlm->>'event_type' = ANY(%s) OR vlm->>'event_type_secondary' = ANY(%s))"); args += [vals, vals]
+ else:
+ conds.append(f"{col[k]} = ANY(%s)"); args.append(vals)
+ score = " + ".join(f"({c})::int" for c in conds)
+ add("concept", [r[0] for r in conn.execute(f"""
+ SELECT id FROM {TABLES['images']} i WHERE vlm ? 'event_type' AND ({' OR '.join(conds)}) {dsql}
+ ORDER BY ({score}) DESC, date_published DESC NULLS LAST LIMIT {POOL}""", (*args, *args, *dargs))])
  # reciprocal rank fusion before the cap; people candidates are never cut
  ids = sorted(cand, key=lambda i: (i not in pscore, -cand[i]))[:MAX_RERANK]
  return ids, why, pscore
 
 
 def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn=None,
- use=("vector", "desc", "text", "person", "rerank"), rel_min=None, parse=None):
+ use=("vector", "desc", "text", "person", "concept", "rerank"), rel_min=None, parse=None):
  rel_min = REL_MIN if rel_min is None else rel_min
  parse = QUERY_PARSE if parse is None else parse
  conn = conn or connect()
