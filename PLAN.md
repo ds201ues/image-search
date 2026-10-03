@@ -322,8 +322,23 @@ People index at 33k: 78,970 faces, 2,886 clusters spanning 2+ photos (largest 22
 reference cleaning, Luna cluster naming at weight 0.6, see EXPERIMENTS.md E13/E14): 12,331 photos with a confident name (37%), 1,475 uncaptioned
 photos with a named person (was 1,303), named faces at ~85% precision. Search metrics unchanged within noise (ALL P@10 0.77 vs 0.79).
 
+### Human validation of the judge (2026-10-03, 300 pairs graded by the product owner at /grade)
+Pool: 100 judge/system disagreements + 100 judge "partly" + 100 random, so agreement here is a pessimistic estimate.
+| | value |
+|---|---|
+| exact grade agreement (0/1/2) | 59% |
+| within one grade | 95% |
+| agreement on relevant yes/no | 85%, Cohen's kappa 0.50 |
+| human says relevant | 19% of pairs; judge 17% |
+| human verdict on results the system shows as "match" | 7 of 7 clearly relevant |
+| human verdict on "possible" tier | 2 of 3 relevant |
+Judge errors found and fixed: (1) primed naming: for people absent from the directory ("farah", "k radhakrishnan", "putin"), the judge saw the name
+in the query and "found" the person (12 false relevants) → names now come from the LLM parse and are always judged blind; (2) Hinglish queries were
+judged by their raw text (judge relevant 4% vs human 24%) → judged by the English rewrite. Judge is stricter than the human on scenes
+(12 "partly" the human called clearly relevant); grade 1 counts half, so this costs little. Affected grades re-judged; see eval/scale33k_v4_report.txt.
+
 ### Open
-1. Human check of the judge: 2 journalists × 300 pairs at /grade (pool built); real query log → next eval set.
+1. Human check: 300 pairs done (above); next, a second grader and the real query log → next eval set.
 2. Reranker: Jev is stage 2; distillation into a local model (E11 plan) for vendor independence and latency (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.
 3. Learned fusion / dynamic cutoff (E7) not trained. Query parse is time-boxed at 700 ms (uncached parse fills the cache in the background).
 4. Latency: 746 ms p50 with the 256-token reranker; keep under 1 s (consider 192 tokens or caching).

@@ -61,12 +61,15 @@ def main():
  names_for, year_of = {}, {}
  for q in qs:
  r = S.search(q["query"], conn=conn, limit=1)
- nm = r["required"]
+ # names come from the LLM parse (so the judge is never primed with a name, even for people missing from the directory);
+ # the context is the English rewrite, so Hinglish queries are judged by meaning
+ parsed_people = [pp["name"] for pp in (r.get("parsed") or {}).get("people") or []]
+ nm = r["required"] or parsed_people
  ys = re.findall(r"\b(19[5-9]\d|20[0-4]\d)\b", q["query"])
  if ys:
  year_of[q["query"]] = (int(min(ys)), int(max(ys)))
  ctx = " ".join(w for w in r["reranked_as"].split() if not any(w in n.lower().split() for n in nm)) if nm else r["reranked_as"]
- if nm or ys:
+ if nm or ys or S.norm(ctx) != S.norm(q["query"]):
  names_for[q["query"]] = (nm or None, ctx)
  g = grades(pairs, files, names_for)
  # a photo outside the asked year range cannot satisfy the query, whatever it shows
