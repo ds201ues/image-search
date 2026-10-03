@@ -48,3 +48,54 @@ real | student suicide
 real | robert vadra
 real | flood in bangalore
 real | women carrying water pots in drought
+# concept queries (2026-10-03): the kind journalists ask that free-text descriptions often miss; written from the taxonomy, not from photos
+concept | minister inaugurating a project
+concept | chief minister addressing a rally
+concept | students celebrating exam results
+concept | students protesting on campus
+concept | police lathi charge on protesters
+concept | farmers protest with tractors
+concept | workers on strike outside factory
+concept | press conference with party leaders
+concept | oath taking ceremony of ministers
+concept | voters queue at polling booth
+concept | evm strong room
+concept | counting of votes
+concept | court hearing lawyers outside court
+concept | hospital ward patients on beds
+concept | doctors protest
+concept | fire brigade dousing fire
+concept | building collapse rescue
+concept | flooded street people wading
+concept | ganesh visarjan procession
+concept | durga puja pandal
+concept | holi celebration colours
+concept | diwali lamps
+concept | eid prayers at mosque
+concept | independence day flag hoisting
+concept | republic day parade
+concept | kabaddi match
+concept | hockey match india
+concept | wrestling bout
+concept | badminton player smashing
+concept | marathon runners on road
+concept | cricket team celebrating with trophy
+concept | football match goal celebration
+concept | fashion show models on ramp
+concept | film stars at award ceremony
+concept | classical dance performance on stage
+concept | book fair crowd
+concept | school children in classroom
+concept | farmers harvesting wheat
+concept | traffic jam on highway
+concept | metro train inauguration
+concept | airport passengers waiting
+concept | railway station crowd
+concept | slum demolition drive
+concept | protest with placards outside office
+concept | candle march
+concept | funeral procession
+concept | politician garlanded by supporters
+concept | army parade with tanks
+concept | temple festival chariot
+concept | market vegetables vendors

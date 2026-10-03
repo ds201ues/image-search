@@ -119,6 +119,8 @@ def flatten_vlm(v: dict | None) -> str:
  for p in v.get("people") or []:
  parts += [p.get("description", ""), p.get("clothing", ""), p.get("action", ""), p.get("expression", "")]
  parts += p.get("colors") or []
+ from .vlm_v2 import concepts_line
+ parts.append(concepts_line(v)) # taxonomy labels as words (v2 descriptions only)
  return " ".join(x for x in parts if x)
 
 

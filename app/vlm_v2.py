@@ -24,6 +24,21 @@ CUE = ["khadi_or_kurta_politician_attire", "party_flags_or_symbols", "police_uni
  "garlands_or_shawl_felicitation", "security_cordon", "official_vehicle_or_convoy"]
 SYMBOL_TYPE = ["party_flag", "national_flag", "state_emblem", "team_or_club_badge", "company_logo", "religious_symbol", "protest_banner_or_placard"]
 COUNT = ["0", "1", "2-5", "6-20", "21-100", "100+"]
+SPORT = ["cricket", "football", "hockey", "kabaddi", "tennis", "badminton", "wrestling", "athletics", "golf", "motorsport", "boxing", "chess",
+ "basketball", "volleyball", "swimming", "shooting", "archery", "cycling", "table_tennis", "other_sport", "none"]
+OCCASION = ["ganesh_chaturthi", "durga_puja_or_navratri", "diwali", "holi", "eid", "christmas", "independence_day", "republic_day", "gandhi_jayanti",
+ "onam", "pongal_or_sankranti", "chhath", "muharram", "guru_nanak_jayanti", "ram_navami_or_hanuman_jayanti", "new_year", "election_day",
+ "budget_day", "convocation", "other_festival", "none_or_unknown"]
+LANDMARK = ["gateway_of_india", "india_gate", "red_fort", "qutub_minar", "taj_mahal", "parliament_house_delhi", "rashtrapati_bhavan", "vidhana_soudha",
+ "howrah_bridge", "victoria_memorial", "charminar", "marine_drive", "bandra_worli_sea_link", "golden_temple", "lotus_temple",
+ "mysore_palace", "hawa_mahal", "eden_gardens", "wankhede_stadium", "chinnaswamy_stadium", "narendra_modi_stadium", "jantar_mantar",
+ "mantralaya_mumbai", "bombay_high_court", "supreme_court", "other_named_landmark", "none"]
+LANDMARK_CITY = {"gateway_of_india": "mumbai", "marine_drive": "mumbai", "bandra_worli_sea_link": "mumbai", "wankhede_stadium": "mumbai",
+ "mantralaya_mumbai": "mumbai", "bombay_high_court": "mumbai", "india_gate": "delhi", "red_fort": "delhi", "qutub_minar": "delhi",
+ "parliament_house_delhi": "delhi", "rashtrapati_bhavan": "delhi", "lotus_temple": "delhi", "jantar_mantar": "delhi",
+ "supreme_court": "delhi", "taj_mahal": "agra", "vidhana_soudha": "bengaluru", "chinnaswamy_stadium": "bengaluru",
+ "howrah_bridge": "kolkata", "victoria_memorial": "kolkata", "eden_gardens": "kolkata", "charminar": "hyderabad",
+ "golden_temple": "amritsar", "mysore_palace": "mysuru", "hawa_mahal": "jaipur", "narendra_modi_stadium": "ahmedabad"}
 EXPRESSION = ["neutral", "smiling", "laughing", "serious", "angry", "crying", "shouting", "surprised", "eyes_closed", "not_visible"]
 
 PROMPT = """You index news photographs for an Indian newspaper's photo search used by journalists. Classify the photo into the newsroom
@@ -38,6 +53,10 @@ Rules:
  (e.g. "BJP lotus", "Congress hand", "tricolour", "RCB", "Reliance"). Never infer a party from a person.
 - objects: 3-12 short nouns of news value (EVM, placard, barricade, lathi, trophy, garland, sandbag, boat, ambulance, debris, hoarding).
 - actions: 2-6 verbs or short phrases (addressing, waving, garlanding, lighting lamp, cutting ribbon, protesting, batting, grieving).
+- sport: the sport being played or shown (kit, equipment, ground), else "none". occasion: the festival or national day ONLY when the visual
+ cues are unmistakable (idols, colours, lamps, flags, parade), else "none_or_unknown". landmark: ONLY an unmistakable named monument or
+ building from the list, else "none"; put any other recognisable named place in landmarks_text. teams: team or club names legible on
+ jerseys, badges or boards.
 - recognized_people: well-known public figures you can recognise, common full English name, confidence 0-1; leave out below 0.5.
  Names go ONLY there (names written in the image go in visible_text).
 - summary: 1-2 factual sentences. tags: 15-30 lowercase keywords including synonyms a journalist might type (rally/protest/demonstration/dharna).
@@ -48,11 +67,14 @@ def _arr(item): return {"type": "array", "items": item}
 PERSON_V2 = {**PERSON, "required": PERSON["required"], "properties": {**PERSON["properties"], "expression": _enum(EXPRESSION)}}
 SCHEMA = {
  "type": "object", "additionalProperties": False,
- "required": ["event_type", "event_type_secondary", "setting", "actor_roles", "actor_count", "role_cues", "symbols", "objects", "actions",
+ "required": ["event_type", "event_type_secondary", "setting", "sport", "occasion", "landmark", "landmarks_text", "teams",
+ "actor_roles", "actor_count", "role_cues", "symbols", "objects", "actions",
  "crowd_scale", "weather", "time_of_day", "shot_type", "image_type", "recognized_people", "summary", "people",
  "place_type", "landmarks", "visible_text", "mood", "dominant_colors", "tags"],
  "properties": {
  "event_type": _enum(EVENT), "event_type_secondary": _enum(EVENT + ["none"]), "setting": _enum(SETTING),
+ "sport": _enum(SPORT), "occasion": _enum(OCCASION), "landmark": _enum(LANDMARK), "landmarks_text": _arr({"type": "string"}),
+ "teams": _arr({"type": "string"}),
  "actor_roles": _arr(_enum(ROLE)), "actor_count": _enum(COUNT), "role_cues": _arr(_enum(CUE)),
  "symbols": _arr({"type": "object", "additionalProperties": False, "required": ["type", "label"],
  "properties": {"type": _enum(SYMBOL_TYPE), "label": {"type": "string"}}}),
@@ -70,10 +92,22 @@ SCHEMA = {
 }
 
 
+def is_v2(v: dict | None) -> bool:
+ return bool(v) and "event_type" in v
+
+
 def concepts_line(v: dict) -> str:
- """One line for search_text / stage 2: taxonomy labels as words."""
+ """One line for search_text / stage 2: taxonomy labels as words ("" for v1 descriptions)."""
+ if not is_v2(v):
+ return ""
  w = lambda s: (s or "").replace("_", " ")
- parts = [w(v.get("event_type")), w(v.get("event_type_secondary")) if v.get("event_type_secondary") not in (None, "none") else "",
+ skip = {"", "other", "none", "none_or_unknown", "other_sport", "none_visible", "not_visible", "unknown"}
+ lm = v.get("landmark") if v.get("landmark") not in skip else ""
+ parts = [w(v.get("event_type")),
+ w(v.get("sport")) if v.get("sport") not in skip else "",
+ w(v.get("occasion")) if v.get("occasion") not in skip else "",
+ w(lm) + (f" {LANDMARK_CITY[lm]}" if lm in LANDMARK_CITY else ""), ", ".join(v.get("landmarks_text") or []),
+ ", ".join(v.get("teams") or []), w(v.get("event_type_secondary")) if v.get("event_type_secondary") not in (None, "none") else "",
  w(v.get("setting")), " ".join(w(r) for r in v.get("actor_roles") or []), " ".join(w(c) for c in v.get("role_cues") or []),
  " ".join(s.get("label", "") for s in v.get("symbols") or []), ", ".join(v.get("objects") or []), ", ".join(v.get("actions") or []),
  f"crowd {v.get('crowd_scale')}" if v.get("crowd_scale") not in (None, "none") else "", w(v.get("weather")) if v.get("weather") not in (None, "not_visible", "clear") else ""]

@@ -72,4 +72,6 @@ def doc_text(v: dict | None, caption: str | None = None, date=None, for_embeddin
  f"Date: {date.strftime('%Y-%m') if hasattr(date, 'strftime') else date}." if date and not for_embedding else "",
  f"Text in image: {', '.join(v.get('visible_text') or [])}." if v.get("visible_text") else "",
  f"Type: {v.get('image_type', '')}."]
- return cap + " ".join(p for p in parts if p.strip())
+ from .vlm_v2 import concepts_line
+ conc = concepts_line(v)
+ return cap + (conc + " " if conc else "") + " ".join(p for p in parts if p.strip())
