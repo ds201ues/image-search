@@ -260,7 +260,7 @@ def _recall(conn, U, use):
  score = " + ".join(f"({c})::int" for c in conds)
  add("concept", [r[0] for r in conn.execute(f"""
  SELECT id FROM {TABLES['images']} i WHERE vlm ? 'event_type' AND ({' OR '.join(conds)}) {dsql}
- ORDER BY ({score}) DESC, date_published DESC NULLS LAST LIMIT {POOL}""", (*args, *args, *dargs))])
+ ORDER BY ({score}) DESC, date_published DESC NULLS LAST LIMIT {POOL}""", (*args, *dargs, *args))]) # WHERE, date filter, ORDER BY
  # reciprocal rank fusion before the cap; people candidates are never cut
  ids = sorted(cand, key=lambda i: (i not in pscore, -cand[i]))[:MAX_RERANK]
  return ids, why, pscore
