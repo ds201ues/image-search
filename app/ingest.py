@@ -176,6 +176,8 @@ CAPTION_ASSIGN_SIM = 0.30 # caption names one person, several faces: the face cl
 REF_OUTLIER_SIM = 0.20 # a reference that resembles none of its person's other references (3+ refs) is a mislabelled face
 CLUSTER_VLM_MIN = 0.6 # Luna naming a face cluster (2-3 crops side by side) counts as evidence above this confidence
 CLUSTER_VLM_WEIGHT = 0.9
+CLUSTER_VLM_FULL = 0.55 # a face at least this similar to the crops Luna saw gets the full weight ...
+CLUSTER_VLM_FLOOR = 0.40 # ... fading to half weight here; below it the name does not propagate (clusters can chain two people)
 
 
 def step_text(conn, batch=64):
@@ -343,18 +345,39 @@ def step_people(conn):
  break
  chosen[cid] = picks
  named = name_clusters(chosen)
- cl_rows = []
+ from .search import People
+ directory = People(conn) # Luna's spelling -> existing person when it is the same name (alias/initials)
+ cl_rows, cl_named = [], 0
  for cid, (name, conf) in named.items():
  if not name or conf < CLUSTER_VLM_MIN:
  continue
+ hit = directory.link_name(name)
+ if hit and hit[1] >= 0.8:
+ pid = hit[0]
+ else:
  pid = conn.execute("""INSERT INTO persons (name) VALUES (%s) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
  RETURNING id""", (name,)).fetchone()[0]
- for iid in {i for _, i in multi[cid]}:
- cl_rows.append((iid, pid, round(CLUSTER_VLM_WEIGHT * conf, 3)))
+ cl_named += 1
+ shown = [fid for fid, *_ in chosen[cid]]
+ # propagate per face, weighted by similarity to the faces Luna saw (not to the whole, possibly chained, cluster)
+ for iid, sim in conn.execute("""SELECT f.image_id, max(1 - (f.emb <=> g.emb)) FROM faces f, faces g
+ WHERE f.cluster_id = %s AND g.id = ANY(%s) GROUP BY f.image_id""", (cid, shown)):
+ if sim >= CLUSTER_VLM_FULL:
+ w = 1.0
+ elif sim >= CLUSTER_VLM_FLOOR:
+ w = 0.5 + 0.5 * (sim - CLUSTER_VLM_FLOOR) / (CLUSTER_VLM_FULL - CLUSTER_VLM_FLOOR)
+ else:
+ continue
+ cl_rows.append((iid, pid, round(CLUSTER_VLM_WEIGHT * conf * w, 3)))
+ best_cl = {}
+ for iid, pid, sc in cl_rows:
+ best_cl[(iid, pid)] = max(sc, best_cl.get((iid, pid), 0))
  with conn.cursor() as cur:
- cur.executemany("INSERT INTO image_persons VALUES (%s, %s, 'cluster_vlm', %s) ON CONFLICT DO NOTHING", cl_rows)
+ cur.executemany("INSERT INTO image_persons VALUES (%s, %s, 'cluster_vlm', %s) ON CONFLICT DO NOTHING",
+ [(i, p, sc) for (i, p), sc in best_cl.items()])
+ cl_rows = list(best_cl)
  print(f" cluster naming: {len(multi)} clusters asked ({cl_spent['calls']} new calls, ${cl_spent['usd']:.3f}), "
- f"{sum(1 for n, c in named.values() if n and c >= CLUSTER_VLM_MIN)} named, {len(cl_rows)} photo-person rows")
+ f"{cl_named} named, {len(cl_rows)} photo-person rows (similarity-weighted)")
 
  # one row per (image, person): keep the strongest face
  best = {}

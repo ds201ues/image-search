@@ -104,4 +104,10 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  reference outlier cleaning. Re-measure after the next people run.
 - SCALE 33k (2026-10-02): P@10 0.79 / R 0.88 / empty 3 / junk 0.16 (5k: 0.78 / 0.90 / 6 / 0.15); hit@1 0.57, hit@10 0.79, never retrieved 17
  (5k: 0.70 / 0.92 / 7); p50 878 ms. Precision holds at 6.7× data; known-item rank drops because more valid photos exist. eval/scale33k_report.txt
+- E14 cluster_vlm (2026-10-03): Luna names face clusters from the 3 clearest crops side by side. 2,886 clusters, $0.85, 802 named (Modi 221 photos,
+ Yediyurappa 75, Siddaramaiah 75, Nitish 71, Mamata 70...). First version spread the name to every photo in the cluster: photos with a confident name
+ 12,253→12,605, uncaptioned photos with a name 1,303→1,736, BUT only 45% of named clusters agreed with their single-face caption names: (a) spelling
+ duplicates in the directory ("A. Revanth Reddy" vs "Revanth Reddy"), (b) chained clusters mixing people who appear together (Nitish Kumar /
+ Sushil Kumar Modi, Siddaramaiah / D. K. Shivakumar). Fix: match Luna's name to the directory (link_name) and propagate per face weighted by
+ similarity to the crops Luna saw (full ≥ 0.55, fading to 0.40, none below). Re-measured below.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
