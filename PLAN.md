@@ -335,7 +335,8 @@ Pool: 100 judge/system disagreements + 100 judge "partly" + 100 random, so agree
 Judge errors found and fixed: (1) primed naming: for people absent from the directory ("farah", "k radhakrishnan", "putin"), the judge saw the name
 in the query and "found" the person (12 false relevants) → names now come from the LLM parse and are always judged blind; (2) Hinglish queries were
 judged by their raw text (judge relevant 4% vs human 24%) → judged by the English rewrite. Judge is stricter than the human on scenes
-(12 "partly" the human called clearly relevant); grade 1 counts half, so this costs little. Affected grades re-judged; see eval/scale33k_v4_report.txt.
+(12 "partly" the human called clearly relevant); grade 1 counts half, so this costs little. Affected grades re-judged (eval/scale33k_v4_report.txt, 33k index): ALL P@10 0.78 both tiers / 0.83 top tier, R@pool 0.87, empty 5, junk/q 0.15;
+person_context 0.58 / 0.71 (was 0.57 / 0.65 under the primed judge), hinglish 0.79 / 0.71; hit@10 0.79. These are the current reference numbers.
 
 ### Open
 1. Human check: 300 pairs done (above); next, a second grader and the real query log → next eval set.
