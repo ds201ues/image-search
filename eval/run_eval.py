@@ -46,7 +46,8 @@ def main():
  ap.add_argument("--sweep", action="store_true"); ap.add_argument("--show-misses", action="store_true")
  ap.add_argument("--label", default=None, help="save per-query metrics to eval/runs/<label>.json for paired comparison (eval/compare.py)")
  a = ap.parse_args()
- conn = connect(); S.search("warm up", conn=conn)
+ conn = connect(); S.PARSE_TIMEOUT_MS = 60000 # the eval measures quality: always wait for the parse (latency is measured separately)
+ S.search("warm up", conn=conn)
  files = dict(conn.execute("SELECT id, file FROM images"))
  qs = load_queries()
 

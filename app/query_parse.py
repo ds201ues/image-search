@@ -57,6 +57,13 @@ def _load():
  return _cache
 
 
+def cached(q: str):
+ """The parse if it is already cached, else None (no API call, no thread)."""
+ key = " ".join(q.lower().split())
+ c = _load()
+ return {**c[key], "cached": True} if key in c else None
+
+
 def parse(q: str) -> dict:
  """Cached parse. Never raises: on API failure returns an empty parse so search degrades to the plain query."""
  global _client

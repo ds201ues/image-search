@@ -24,7 +24,7 @@ from .embed import embed_text
 from .text import embed_query
 from .decide import rerank
 from .config import QUERY_PARSE
-from .query_parse import parse as parse_query
+from .query_parse import parse as parse_query, cached as parse_cached
 from .aliases import expand_cities, CITY_ALIASES
 
 # Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
@@ -254,13 +254,10 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  now = time.perf_counter(); T[k] = round((now - t) * 1000, 1); t = now
 
  # ---- parse in the background; first recall pass on the raw query right away
- fut = _parse_pool.submit(parse_query, q) if parse else None
- parsed = None
- if fut and fut.done(): # cached: use it from the start
- try:
- parsed = fut.result()
- except Exception:
- parsed = None
+ # a cached parse is applied synchronously from the start (deterministic, and no second recall pass);
+ # an uncached one runs in the background within the time box
+ parsed = parse_cached(q) if parse else None
+ fut = _parse_pool.submit(parse_query, q) if (parse and parsed is None) else None
  U = _understand(conn, q, parsed, year_from, year_to, person_ids)
  lap("parse_ms")
  ids, why, pscore = _recall(conn, U, use)

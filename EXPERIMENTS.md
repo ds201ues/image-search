@@ -124,5 +124,8 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  the recall text (the 400-char cap was new) and stage-2 query keeps original words the archive uses (place P@10 had dropped 6–10). v3 result: still no clear change (P@10 0.78→0.79), P@10/10
  formally WORSE (−0.01), known-item hit@10 0.79→0.75 in all three variants, place −5 every time; real-log queries better every time (nDCG 0.88→0.95).
  DECISION: keep only the richer stage-2 document (fixes "yogi laughing"-type misses); revert the recall-vector text to the pre-round document and
- revert the clean stage-2 query. Confirmation run: after_bugfix_v4.
+ revert the clean stage-2 query. Confirmation run v4 (recall text and union query restored): known-item STILL 0.51 / 0.74 / 19 → the drop was never caused by the
+ bug fixes. Root cause: a race in search() (parse thread vs first recall pass) made every eval run nondeterministic (±3–5 known-item points);
+ fixed 2026-10-03 (cached parse applied synchronously; eval waits for the parse). FINAL for this round: rich stage-2 document kept
+ ("yogi laughing" 0 → 10 results, real-query nDCG 0.88 → 0.95 in every run); recall text and stage-2 query as before the round.
 - E10 vlm_rerank: CANCELLED before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
