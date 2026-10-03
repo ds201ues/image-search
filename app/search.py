@@ -190,10 +190,19 @@ def _understand(conn, q, parsed, year_from, year_to, person_ids):
  ctx = " ".join(ctx.split())
  expansions = " ".join(parsed.get("expansions") or []) if parsed else ""
  ctx_text = expand_cities((ctx + " " + expansions).strip()) # word matching gets synonyms + city variants
+ # stage 2 reads a clean English sentence: required people by canonical name + the parse's rewrite (no Hinglish/union noise)
+ if parsed and parsed.get("search_text"):
+ names = [P.names[p] for p, _, _ in strong]
+ rewrite = norm(re.sub(YEAR_RE, "", parsed["search_text"]))
+ for n in names:
+ rewrite = rewrite.replace(norm(n), " ")
+ ctx_rr = " ".join((" ".join(n.lower() for n in names) + " " + rewrite).split()) or ctx
+ else:
+ ctx_rr = ctx
  if parsed and parsed.get("city") in CITY_ALIASES and parsed["city"] not in ctx_text:
  ctx_text += " " + " ".join(CITY_ALIASES[parsed["city"]])
  return dict(q_eff=q_eff, links=links, strong=strong, pids=[p for p, _, _ in links], year_from=year_from, year_to=year_to,
- ctx=ctx, ctx_text=ctx_text)
+ ctx=ctx, ctx_text=ctx_text, ctx_rr=ctx_rr)
 
 
 def _recall(conn, U, use):
@@ -261,7 +270,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  parsed = None
  if parsed:
  U2 = _understand(conn, q, parsed, year_from, year_to, person_ids)
- if (U2["ctx_text"], U2["pids"], U2["year_from"], U2["year_to"]) != (U["ctx_text"], U["pids"], U["year_from"], U["year_to"]):
+ if (U2["ctx_text"], U2["ctx_rr"], U2["pids"], U2["year_from"], U2["year_to"]) != (U["ctx_text"], U["ctx_rr"], U["pids"], U["year_from"], U["year_to"]):
  U = U2
  ids, why, pscore = _recall(conn, U, use)
  lap("parse_llm_ms")
@@ -276,7 +285,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  FROM {TABLES["images"]} i WHERE i.id = ANY(%s)""", (PERSON_SURE, PERSON_MIN, ids)):
  docs[iid] = f"People: {ppl}. {d}" if ppl else d
  if "rerank" in use:
- pc = dict(zip(ids, rerank(U["ctx"], [docs.get(i, "") for i in ids])))
+ pc = dict(zip(ids, rerank(U["ctx_rr"], [docs.get(i, "") for i in ids])))
  else: # ablation without stage 2: recall rank as a stand-in
  pc = {i: 1 / (1 + min(int(w.split("#")[1]) for w in why[i] if "#" in w) / 10) for i in ids}
  lap("rerank_ms")
@@ -308,7 +317,7 @@ def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn
  return {"query": q, "query_used": U["q_eff"], "parsed": parsed,
  "persons": [{"name": names[p], "p_link": round(c, 2), "words": w} for p, c, w in U["links"]],
  "persons_missing": [names[p] for p in pids if p not in present] + unlinked,
- "required": [names[p] for p, _, _ in U["strong"]], "reranked_as": U["ctx"],
+ "required": [names[p] for p, _, _ in U["strong"]], "reranked_as": U["ctx_rr"],
  "years": [U["year_from"], U["year_to"]], "timings": T, "count": len(rows), "candidates": len(ids),
  "matches": sum(1 for r in results if r["tier"] == "match"), "results": rows}
 

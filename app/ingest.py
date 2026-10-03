@@ -183,15 +183,15 @@ CLUSTER_VLM_FLOOR = 0.40 # ... fading to half weight here; below it the name doe
 def step_text(conn, batch=64):
  """Reranker text + description-meaning vector for every described image."""
  from .text import doc_text, embed_docs
- todo = conn.execute("SELECT id, vlm, caption FROM images WHERE (vlm IS NOT NULL OR caption IS NOT NULL) AND desc_emb IS NULL").fetchall()
+ todo = conn.execute("SELECT id, vlm, caption, date_published FROM images WHERE (vlm IS NOT NULL OR caption IS NOT NULL) AND desc_emb IS NULL").fetchall()
  def run():
  for i in range(0, len(todo), batch):
  chunk = todo[i:i + batch]
- docs = [doc_text(v, c) for _, v, c in chunk]
+ docs = [doc_text(v, c, d) for _, v, c, d in chunk]
  vecs = embed_docs(docs)
  with conn.cursor() as cur:
  cur.executemany("UPDATE images SET doc_text = %s, desc_emb = %s WHERE id = %s",
- [(d, e, iid) for (iid, _, _), d, e in zip(chunk, docs, vecs)])
+ [(d, e, iid) for (iid, _, _, _), d, e in zip(chunk, docs, vecs)])
  return todo, run
 
 

@@ -44,21 +44,31 @@ def rerank(q: str, docs: list[str]) -> np.ndarray:
  return 1 / (1 + np.exp(-np.asarray(logits, dtype=np.float32)))
 
 
-def doc_text(v: dict | None, caption: str | None = None) -> str:
- """What the reranker and description embedding read: photographer caption first (who/where/what), then the VLM description."""
+def doc_text(v: dict | None, caption: str | None = None, date=None) -> str:
+ """What stage 2 and the description embedding read: photographer caption (capped), then the VLM description including
+ expression, mood, colours, time of day, and the archive date (month) so date-worded queries ("during pandemic", "2019") can match."""
  if not v and not caption:
  return ""
  v = v or {}
- cap = f"Caption: {' '.join(caption.split())}. " if caption else ""
- people = "; ".join(", ".join(x for x in (p.get("description"), p.get("clothing"), p.get("action")) if x)
- for p in v.get("people") or [])
+ cap = " ".join(caption.split()) if caption else ""
+ if len(cap) > 400:
+ cap = cap[:400].rsplit(" ", 1)[0] + " …"
+ cap = f"Caption: {cap}. " if cap else ""
+ ppl = v.get("people") or []
+ people = "; ".join(", ".join(x for x in (p.get("description"), p.get("clothing"), p.get("action")) if x) for p in ppl)
+ expr = ", ".join(sorted({p.get("expression", "").strip().lower() for p in ppl if p.get("expression")}))
  parts = [v.get("summary", ""),
  f"People: {people}." if people else "",
+ f"Expression: {expr}." if expr else "",
+ f"Mood: {v.get('mood')}." if v.get("mood") else "",
  f"Place: {v.get('place_type', '')} {v.get('location_guess', '')}.",
  f"Event: {v.get('event_type', '')}." if v.get("event_type") else "",
  f"Activities: {', '.join(v.get('activities') or [])}." if v.get("activities") else "",
  f"Objects: {', '.join(v.get('objects') or [])}." if v.get("objects") else "",
  f"Landmarks: {', '.join(v.get('landmarks') or [])}." if v.get("landmarks") else "",
+ f"Colours: {', '.join(v.get('dominant_colors') or [])}." if v.get("dominant_colors") else "",
+ f"Time: {v.get('time_of_day').replace('_', ' ')}." if v.get("time_of_day") and v.get("time_of_day") != "unknown" else "",
+ f"Date: {date.strftime('%Y-%m') if hasattr(date, 'strftime') else date}." if date else "",
  f"Text in image: {', '.join(v.get('visible_text') or [])}." if v.get("visible_text") else "",
  f"Type: {v.get('image_type', '')}."]
  return cap + " ".join(p for p in parts if p.strip())
