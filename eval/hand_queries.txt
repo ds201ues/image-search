@@ -37,3 +37,14 @@ person_context | trump and xi together
 person_context | shehbaz sharif with saudi crown prince
 person_context | netanyahu addressing the media
 person_context | amit shah at a rally
+# real journalist-style queries from the live log (2026-10-02/03)
+real | yogi laughing
+real | yogi smiling
+real | rahul gandhi smiling
+real | mama ji
+real | shivraj
+real | delhi protests
+real | student suicide
+real | robert vadra
+real | flood in bangalore
+real | women carrying water pots in drought

@@ -110,6 +110,12 @@ def blind_people(iid, file):
  return ppl
 
 
+def _fold(s):
+ import unicodedata
+ s = unicodedata.normalize("NFKD", s or "")
+ return "".join(ch for ch in s if not unicodedata.combining(ch)).lower()
+
+
 def _same(a, b):
  from difflib import SequenceMatcher
  a, b = a.lower().strip(), b.lower().strip()
@@ -131,8 +137,16 @@ def _judge_one(q, iid, file, names=None, ctx=None):
  def named(n):
  if any(_same(n, s) for s in seen):
  return True
- toks = [t for t in n.lower().replace(".", " ").split() if len(t) > 2]
- return bool(toks) and all(t in cap for t in toks) # every name word appears in the caption
+ # caption check: accent-folded; initials and honorifics ignored; surname + one other name word is enough
+ # ("Y S Rajasekara Reddy" ~ "Rajasekhara Reddy", "Luiz Inacio" ~ "Inácio"), with a fuzzy match per word
+ from difflib import SequenceMatcher
+ capf = _fold(cap)
+ toks = [t for t in _fold(n).replace(".", " ").split() if len(t) > 2 and t not in ("the", "duke", "duchess", "prince", "princess", "of")]
+ if not toks:
+ return False
+ capw = capf.split()
+ hit = [t for t in toks if t in capf or any(SequenceMatcher(None, t, w).ratio() >= 0.86 for w in capw if abs(len(w) - len(t)) <= 2)]
+ return len(hit) >= min(2, len(toks)) and toks[-1] in hit
  if not all(named(n) for n in names):
  grade, reason = 0, f"blind ID saw {seen or 'nobody'}, not {names}"
  elif not ctx:
