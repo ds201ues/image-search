@@ -29,7 +29,7 @@ from .aliases import expand_cities, CITY_ALIASES
 
 # Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
 TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
-DEFAULT_USE = ("vector", "desc", "text", "person", "concept", "rerank") + (("rare",) if _os.getenv("RECALL_RARE", "0") == "1" else ())
+DEFAULT_USE = ("vector", "desc", "text", "person", "concept", "rerank") + (("rare",) if _os.getenv("RECALL_RARE", "1") == "1" else ()) # rare-word source ON by default: measured BETTER 2026-10-04 (place +0.11, never-retrieved 18→14)
 PARSE_TIMEOUT_MS = int(_os.getenv("PARSE_TIMEOUT_MS", "700")) # uncached LLM parse takes ~2 s; past this we answer without it
 _parse_pool = ThreadPoolExecutor(8)
 

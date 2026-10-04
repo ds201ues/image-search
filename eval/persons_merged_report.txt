@@ -1,0 +1,32 @@
+ judged 258/1003
+ judged 536/1003
+ judged 799/1003
+judged pairs: 10880 (new judging cost $0.125 over 940 calls)
+
+FULL SYSTEM, both tiers (relevance >= 0.1)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.78 0.60 0.90 0.85 1 0.37 24.5
+person_context 29 0.65 0.22 0.58 0.86 2 0.48 3.8
+scene 65 0.81 0.58 0.75 0.86 1 0.00 25.1
+attribute 19 0.85 0.60 0.80 0.91 0 0.11 22.3
+place 23 0.87 0.58 0.71 0.89 1 0.13 19.3
+event_year 27 0.85 0.20 0.58 0.91 1 0.07 3.1
+hinglish 16 0.78 0.47 0.82 0.91 0 0.00 16.9
+real 10 0.78 0.74 0.93 0.93 0 0.50 26.7
+concept 50 0.89 0.85 0.91 0.95 0 0.00 42.6
+ALL 258 0.82 0.56 0.77 0.90 6 0.13 22.6 [P@10 95% 0.79-0.85]
+
+TOP TIER ONLY (relevance >= 0.5)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.85 0.60 0.77 0.69 2 0.11 21.6
+person_context 29 0.70 0.16 0.46 0.71 3 0.10 1.4
+scene 65 0.85 0.44 0.55 0.61 6 0.00 13.6
+attribute 19 0.94 0.43 0.65 0.63 0 0.00 6.0
+place 23 0.89 0.47 0.58 0.63 2 0.00 9.9
+event_year 27 0.74 0.11 0.42 0.60 6 0.00 1.2
+hinglish 16 0.67 0.19 0.47 0.48 4 0.00 3.3
+real 10 0.81 0.61 0.76 0.63 1 0.00 12.2
+concept 50 0.92 0.76 0.79 0.66 1 0.00 20.5
+ALL 258 0.84 0.44 0.60 0.63 25 0.02 11.3 [P@10 95% 0.79-0.88]
+known-item (160 generated queries): hit@1 0.51 hit@5 0.69 hit@10 0.76 [95% 0.69-0.82] MRR 0.60 never retrieved 18
+saved eval/runs/persons_merged.json
