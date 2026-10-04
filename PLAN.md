@@ -338,6 +338,11 @@ judged by their raw text (judge relevant 4% vs human 24%) → judged by the Engl
 (12 "partly" the human called clearly relevant); grade 1 counts half, so this costs little. Affected grades re-judged (eval/scale33k_v4_report.txt, 33k index): ALL P@10 0.78 both tiers / 0.83 top tier, R@pool 0.87, empty 5, junk/q 0.15;
 person_context 0.58 / 0.71 (was 0.57 / 0.65 under the primed judge), hinglish 0.79 / 0.71; hit@10 0.79. These are the current reference numbers.
 
+### Taxonomy prompt (2026-10-03): tested on the full archive, not adopted
+Concept taxonomy (event/setting/roles/sport/occasion/landmark) as closed vocabularies in the indexing prompt, same facets in the query parser,
+5th recall source on the labels. Labels were accurate (human check: 40/50 fully correct, 10 minor) and closed the caption-vs-description vocabulary gap
+(e.g. "minister" 7%→47%), but search quality did not improve and top-tier recall fell (EXPERIMENTS.md E16). Reverted to v1 descriptions; v2 labels kept.
+
 ### Open
 1. Human check: 300 pairs done (above); next, a second grader and the real query log → next eval set.
 2. Reranker: Jev is stage 2; distillation into a local model (E11 plan) for vendor independence and latency (biggest precision lever). 2. Caption-aware Luna pass evaluated: no gain over the default once caption names are integrated (EXPERIMENTS.md E3); not adopted.

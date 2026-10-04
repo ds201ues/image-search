@@ -1,0 +1,48 @@
+ judged 275/3554
+ judged 546/3554
+ judged 818/3554
+ judged 1075/3554
+ judged 1331/3554
+ judged 1601/3554
+ judged 1879/3554
+ judged 2131/3554
+ judged 2387/3554
+ judged 2654/3554
+ judged 2910/3554
+ judged 3168/3554
+ judged 3443/3554
+judged pairs: 12287 (new judging cost $0.472 over 3418 calls)
+
+FULL SYSTEM, both tiers (relevance >= 0.1)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.96 0.66 0.94 0.88 0 0.16 24.0
+person_context 29 0.66 0.20 0.59 0.91 1 0.41 3.7
+scene 65 0.83 0.57 0.74 0.88 0 0.02 24.8
+attribute 19 0.85 0.58 0.79 0.91 0 0.11 20.5
+place 23 0.80 0.59 0.70 0.81 1 0.17 18.0
+event_year 27 0.85 0.18 0.54 0.82 1 0.07 3.1
+hinglish 16 0.78 0.45 0.81 0.90 0 0.00 17.6
+real 10 0.78 0.75 0.93 0.96 0 0.80 23.7
+concept 50 0.88 0.85 0.92 0.94 0 0.02 44.0
+ALL 258 0.83 0.56 0.77 0.89 3 0.13 22.4 [P@10 95% 0.81-0.86]
+
+TOP TIER ONLY (relevance >= 0.5)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+person 19 0.93 0.62 0.84 0.75 1 0.05 21.1
+person_context 29 0.73 0.17 0.50 0.76 2 0.10 1.6
+scene 65 0.82 0.42 0.52 0.54 8 0.00 12.7
+attribute 19 0.89 0.38 0.59 0.54 1 0.00 5.1
+place 23 0.90 0.45 0.54 0.55 1 0.00 9.0
+event_year 27 0.75 0.11 0.40 0.62 6 0.00 1.1
+hinglish 16 0.74 0.18 0.47 0.44 3 0.00 2.1
+real 10 0.85 0.63 0.78 0.64 0 0.30 12.3
+concept 50 0.92 0.75 0.78 0.57 1 0.00 19.7
+ALL 258 0.84 0.44 0.59 0.58 23 0.03 10.6 [P@10 95% 0.80-0.88]
+known-item (160 generated queries): hit@1 0.53 hit@5 0.68 hit@10 0.76 [95% 0.68-0.82] MRR 0.60 never retrieved 23
+saved eval/runs/concept_v2.json
+ variant siglip P@10 0.58 R@pool 0.68 junk/q 1.90
+ variant desc P@10 0.62 R@pool 0.76 junk/q 1.55
+ variant fulltext P@10 0.55 R@pool 0.68 junk/q 2.20
+ variant no_rerank P@10 0.61 R@pool 0.91 junk/q 1.60
+
+latency ms (full): p50 3727 p95 4726 max 6837
