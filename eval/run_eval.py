@@ -19,7 +19,7 @@ from app import search as S
 from eval.judge import grades, spent
 
 HERE = Path(__file__).parent
-VARIANTS = {"full": ("vector", "desc", "text", "person", "concept", "rerank"), "siglip": ("vector", "person"),
+VARIANTS = {"full": None, # None = app.search.DEFAULT_USE (env RECALL_RARE=1 adds the rare-word source) "siglip": ("vector", "person"),
  "desc": ("desc", "person"), "fulltext": ("text", "person"), "no_rerank": ("vector", "desc", "text", "person"),
  "ctx_only": ("vector", "desc", "text", "concept", "rerank")} # no person evidence: pool sees photos the people index missed
 

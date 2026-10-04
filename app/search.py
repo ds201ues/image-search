@@ -29,6 +29,7 @@ from .aliases import expand_cities, CITY_ALIASES
 
 # Experiments swap these for their own copies (exp_* tables/views) without touching the live index.
 TABLES = {"images": "images", "scores": "image_person_scores", "persons": "persons", "faces": "faces"}
+DEFAULT_USE = ("vector", "desc", "text", "person", "concept", "rerank") + (("rare",) if _os.getenv("RECALL_RARE", "0") == "1" else ())
 PARSE_TIMEOUT_MS = int(_os.getenv("PARSE_TIMEOUT_MS", "700")) # uncached LLM parse takes ~2 s; past this we answer without it
 _parse_pool = ThreadPoolExecutor(8)
 
@@ -163,6 +164,16 @@ def _date_sql(year_from, year_to):
  return (" AND " + " AND ".join(sql)) if sql else "", args
 
 
+RARE_DF = int(_os.getenv("RARE_DF", "300")) # a word in fewer than this many photos is "rare" (CMRI, Tynecastle, Jayanagar)
+_df_cache = {}
+
+
+def _doc_freq(conn, w: str) -> int:
+ if w not in _df_cache:
+ _df_cache[w] = conn.execute(f"SELECT count(*) FROM {TABLES['images']} WHERE tsv @@ plainto_tsquery('english', %s)", (w,)).fetchone()[0]
+ return _df_cache[w]
+
+
 _word_cache = {}
 
 
@@ -246,6 +257,15 @@ def _recall(conn, U, use):
  WITH q AS (SELECT to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', %s)), ' | ')) q)
  SELECT id FROM {TABLES['images']} i, q WHERE q.q IS NOT NULL AND tsv @@ q.q {dsql}
  ORDER BY ts_rank_cd(tsv, q.q, 32) DESC LIMIT {POOL}""", (U["ctx_text"], *dargs))])
+ if "rare" in use:
+ # full-text has no rarity weighting (ts_rank_cd has no IDF): a caption naming "CMRI" ranks 789th behind common-word matches.
+ # Second text pass: every rare original word must match; this finds the few photos about a specific named thing.
+ rare = [w for w in U["ctx"].split() if len(w) >= 3 and w not in STOP and 0 < _doc_freq(conn, w) < RARE_DF]
+ if rare:
+ add("rare", [r[0] for r in conn.execute(f"""
+ SELECT id FROM {TABLES['images']} i WHERE tsv @@ plainto_tsquery('english', %s) {dsql}
+ ORDER BY ts_rank_cd(tsv, plainto_tsquery('english', %s), 32) DESC, date_published DESC NULLS LAST LIMIT {POOL}""",
+ (" ".join(rare), *dargs, " ".join(rare)))])
  if "concept" in use and U.get("facets"):
  # photos whose taxonomy labels match the query's facets; more matched facets rank higher (ties: newest first)
  F = U["facets"]; conds, args = [], []
@@ -267,9 +287,10 @@ def _recall(conn, U, use):
 
 
 def search(q: str, limit=60, year_from=None, year_to=None, person_ids=None, conn=None,
- use=("vector", "desc", "text", "person", "concept", "rerank"), rel_min=None, parse=None):
+ use=None, rel_min=None, parse=None):
  rel_min = REL_MIN if rel_min is None else rel_min
  parse = QUERY_PARSE if parse is None else parse
+ use = DEFAULT_USE if use is None else use
  conn = conn or connect()
  T, t0 = {}, time.perf_counter()
  t = t0
