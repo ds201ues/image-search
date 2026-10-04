@@ -93,7 +93,7 @@ SCHEMA = {
 
 
 def is_v2(v: dict | None) -> bool:
- return bool(v) and "event_type" in v
+ return bool(v) and "actor_roles" in v # v1 also has a free-text event_type; actor_roles exists only in the taxonomy schema
 
 
 def concepts_line(v: dict) -> str:
