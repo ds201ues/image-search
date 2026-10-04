@@ -59,7 +59,7 @@ def jev_one(q: str, doc: str, retries=4) -> float:
  for i in range(retries):
  t = time.perf_counter()
  r = _session.post(JEV_URL, json=body, headers=hdr, timeout=30)
- if r.status_code in (429, 529, 500, 502, 503):
+ if r.status_code in (429, 529, 500, 502, 503, 504, 520):
  time.sleep(0.5 * 2 ** i); continue
  r.raise_for_status()
  out = r.json()
@@ -93,7 +93,7 @@ def jev_batch(q: str, docs: list[str], retries=4) -> list[float]:
  for a in range(retries):
  t = time.perf_counter()
  r = _session.post(JEV_URL, json=body, headers=hdr, timeout=60)
- if r.status_code in (429, 529, 500, 502, 503):
+ if r.status_code in (429, 529, 500, 502, 503, 504, 520):
  time.sleep(0.5 * 2 ** a); continue
  r.raise_for_status()
  res = r.json()
