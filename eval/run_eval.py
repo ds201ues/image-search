@@ -19,7 +19,8 @@ from app import search as S
 from eval.judge import grades, spent
 
 HERE = Path(__file__).parent
-VARIANTS = {"full": None, # None = app.search.DEFAULT_USE (env RECALL_RARE=1 adds the rare-word source) "siglip": ("vector", "person"),
+# full = None = app.search.DEFAULT_USE (env RECALL_RARE=1 adds the rare-word source)
+VARIANTS = {"full": None, "siglip": ("vector", "person"),
  "desc": ("desc", "person"), "fulltext": ("text", "person"), "no_rerank": ("vector", "desc", "text", "person"),
  "ctx_only": ("vector", "desc", "text", "concept", "rerank")} # no person evidence: pool sees photos the people index missed
 
@@ -46,6 +47,7 @@ def main():
  ap.add_argument("--sweep", action="store_true"); ap.add_argument("--show-misses", action="store_true")
  ap.add_argument("--label", default=None, help="save per-query metrics to eval/runs/<label>.json for paired comparison (eval/compare.py)")
  ap.add_argument("--images-table", default=None, help="evaluate against an experiment copy of the images table (sets app.search.TABLES['images'])")
+ ap.add_argument("--types", default=None, help="comma-separated query types to run (e.g. newsroom); default all")
  a = ap.parse_args()
  if a.images_table:
  S.TABLES["images"] = a.images_table
@@ -53,6 +55,8 @@ def main():
  S.search("warm up", conn=conn)
  files = dict(conn.execute("SELECT id, file FROM images"))
  qs = load_queries()
+ if a.types:
+ qs = [q for q in qs if q["type"] in a.types.split(",")]
 
  runs = {} # (variant, query) -> results list (ctx_min=0 so thresholds can be swept offline)
  lat = []

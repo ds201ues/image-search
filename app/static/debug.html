@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Desk Search</title>
+<style>
+:root{--bg:#f6f5f2;--panel:#fff;--ink:#16161a;--muted:#6b6b73;--line:#e3e1dc;--accent:#b4232c;--chip:#efede8;--face:#ffd400}
+@media (prefers-color-scheme:dark){:root{--bg:#121214;--panel:#1b1b1f;--ink:#ececef;--muted:#9a9aa3;--line:#2c2c32;--accent:#ef5b62;--chip:#26262b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 20px}
+.top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.02em;white-space:nowrap}.brand b{color:var(--accent)}
+form{flex:1;display:flex;gap:8px;min-width:280px}
+input[type=search]{flex:1;font:inherit;font-size:16px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+input[type=search]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{font:inherit;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.filters{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+select,.yr{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.yr{width:76px}
+.stats{margin-left:auto}
+.examples{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ex{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--chip);border:0;color:var(--ink)}
+.meta-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px;color:var(--muted);font-size:13px}
+.time{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.bar{display:flex;height:8px;width:260px;border-radius:99px;overflow:hidden;background:var(--chip)}
+.bar span{height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.parsed .chip{margin-right:4px}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip)}
+.chip.p{background:var(--accent);color:#fff}
+main{display:flex;gap:0}
+.grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:4px 20px 40px;align-content:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .12s}
+.card:hover{transform:translateY(-2px)}.card.sel{outline:2px solid var(--accent)}
+.card img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--chip)}
+.card .c{padding:8px 10px}
+.card .s{font-size:12.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .d{font-size:11.5px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;gap:6px}
+aside{width:440px;flex:none;border-left:1px solid var(--line);background:var(--panel);height:calc(100vh - 150px);position:sticky;top:150px;overflow:auto;padding:16px;display:none}
+aside.open{display:block}
+.fig{position:relative}.fig img{width:100%;border-radius:8px;display:block}
+.box{position:absolute;border:2px solid var(--face);border-radius:3px}
+.box em{position:absolute;left:-2px;top:-20px;background:var(--face);color:#000;font-size:11px;font-style:normal;padding:1px 5px;border-radius:3px;white-space:nowrap}
+dl{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px;margin:14px 0}
+dt{color:var(--muted)}dd{margin:0}
+.ref{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.notice{grid-column:1/-1;padding:10px 14px;border-radius:10px;background:var(--chip);font-size:13px}
+.empty{padding:60px 20px;color:var(--muted);text-align:center;grid-column:1/-1}
+.x{float:right}
+@media (max-width:900px){aside{position:fixed;inset:auto 0 0 0;width:auto;height:70vh;top:auto;border-top:1px solid var(--line);z-index:9}.bar{width:160px}}
+.card.possible{opacity:.75}</style>
+</head>
+<body>
+<header>
+ <div class="top">
+ <div class="brand">PHOTO<b>DESK</b> search</div>
+ <form id="f"><input type="search" id="q" placeholder="Describe the photo: modi in pink jacket, priyanka gandhi in parliament, flooded street…" autofocus>
+ <button class="primary">Search</button></form>
+ </div>
+ <div class="filters">
+ Person <select id="person"><option value="">Anyone</option></select>
+ Year <input class="yr" id="yf" type="number" placeholder="from"> – <input class="yr" id="yt" type="number" placeholder="to">
+ <span class="stats" id="stats"></span>
+ </div>
+ <div class="examples" id="examples"></div>
+</header>
+<div class="meta-bar" id="mb"></div>
+<main><div class="grid" id="grid"><div class="empty">Type a sentence describing the photo you need.</div></div><aside id="side"></aside></main>
+<script>
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STAGES=[['parse_ms','#8e8e96','parse'],['people_ms','#b4232c','people'],['vectors_ms','#3f7de0','vectors'],['text_ms','#e0a03f','text'],['rerank_ms','#7d4fe0','rerank'],['fetch_ms','#5b5b63','fetch'],['vector_ms','#16a085','vector']];
+const EX=['modi in pink jacket','cricket team celebrating','protest with flags on street','press conference with microphones','fire at night','politician addressing a rally','bollywood actor at an event','flooded road','woman athlete with indian flag','airport aircraft'];
+$('#examples').innerHTML=EX.map(e=>`<button class="ex">${e}</button>`).join('');
+$('#examples').onclick=e=>{if(e.target.matches('.ex')){$('#q').value=e.target.textContent;run()}};
+let last=null;
+async function stats(){const s=await (await fetch('/api/stats')).json();
+ $('#stats').textContent=`${s.images} images · ${s.described} described · ${s.people_found} people · ${s.faces} faces in ${s.face_clusters} clusters · gallery ${s.gallery_size}`;
+ $('#person').innerHTML='<option value="">Anyone</option>'+s.people.map(p=>`<option value="${p.id}">${esc(p.name)} (${p.images})</option>`).join('');}
+function timing(r){const T=r.timings, total=T.total_ms||1;
+ const bar=STAGES.filter(([k])=>T[k]!=null).map(([k,c])=>`<span title="${k} ${T[k]} ms" style="width:${100*T[k]/total}%;background:${c}"></span>`).join('');
+ const leg=STAGES.filter(([k])=>T[k]!=null).map(([k,c,l])=>`<span><i style="background:${c}"></i>${l} ${T[k]}</span>`).join('');
+ const parsed=(r.persons||[]).map(p=>`<span class="chip ${p.p_link>=0.5?'p':''}" title="link ${Math.round(100*p.p_link)}%">${esc(p.name)}${p.p_link<0.5?'?':''}</span>`).join('')+((r.years||[])[0]?`<span class="chip">${r.years[0]}–${r.years[1]}</span>`:'');
+ $('#mb').innerHTML=`<span><span class="time">${r.count}</span> results in <span class="time">${T.total_ms} ms</span>${T.server_ms?` (server ${T.server_ms} ms)`:''}</span>
+ <span class="bar">${bar}</span><span class="legend">${leg}</span>${parsed?`<span class="parsed">understood: ${parsed}</span>`:''}`;}
+function grid(r){last=r;
+ const notes=[];
+ if((r.persons_missing||[]).length) notes.push(`No photos recognised as ${r.persons_missing.map(esc).join(', ')} yet.`);
+ const note=notes.map(n=>`<div class="notice">${n}</div>`).join('');
+ const chips=x=>x.people.map(p=>`<span class="chip p">${esc(p)}</span>`).join(' ')+(x.people_possible||[]).map(p=>`<span class="chip" title="possible match">${esc(p)}?</span>`).join(' ');
+ $('#grid').innerHTML=note+(r.results.length?r.results.map((x,i)=>`${x.tier==='possible'&&(i===0||r.results[i-1].tier!=='possible')?'<div class="divider" style="grid-column:1/-1;color:#999;border-top:1px solid #333;padding:8px 0 2px;font-size:13px">Possible matches</div>':''}<div class="card${x.tier==='possible'?' possible':''}" data-i="${i}"><img loading="lazy" src="${x.thumb}" alt="">
+ <div class="c"><div class="s">${esc(x.vlm?.summary||x.file)}</div>
+ <div class="d"><span>${chips(x)}</span><span>${x.relevance!=null?`<b title="relevance">${Math.round(100*x.relevance)}%</b> · `:''}${x.date||''}</span></div></div></div>`).join('')
+ :(note?'':'<div class="empty">No confident matches. Try describing the photo differently.</div>'));}
+$('#grid').onclick=e=>{const c=e.target.closest('.card');if(!c)return;document.querySelectorAll('.card.sel').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');const x=last.results[+c.dataset.i];detail(x);fetch('/api/click',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:last.query,image_id:x.id,rank:+c.dataset.i+1,action:'open'})});};
+function list(a){return (a||[]).length?a.map(esc).join(', '):'—'}
+function detail(x){const v=x.vlm||{};
+ const boxes=(x.faces||[]).map(f=>{const [bx,by,bw,bh]=f.bbox;return `<div class="box" style="left:${100*bx/x.width}%;top:${100*by/x.height}%;width:${100*bw/x.width}%;height:${100*bh/x.height}%">${f.name?`<em>${esc(f.name)} ${f.score}</em>`:''}</div>`}).join('');
+ const people=(v.people||[]).map(p=>`<div>• ${esc(p.description)}${p.clothing?` — ${esc(p.clothing)}`:''}${p.action?`; ${esc(p.action)}`:''}</div>`).join('')||'—';
+ $('#side').innerHTML=`<button class="x" onclick="$('#side').classList.remove('open')">Close</button>
+ <button onclick="similar('${x.id}')">More like this</button>
+ <div class="fig" style="margin-top:12px"><img src="${x.full}" alt="">${boxes}</div>
+ <p>${esc(v.summary||'Not described yet (VLM step not run).')}</p>
+ <dl><dt>People</dt><dd>${(x.people_sources||[]).map(p=>`${esc(p.name)} <b>${Math.round(100*p.score)}%</b> <span class="chip">${(p.evidence||[]).map(esc).join(' · ')}</span>`).join('<br>')||'—'}</dd><dt>Date</dt><dd>${x.date||'—'}</dd><dt>Type</dt><dd>${esc(v.image_type||'—')}</dd>
+ <dt>Described</dt><dd>${people}</dd><dt>Place</dt><dd>${esc([v.place_type,v.location_guess].filter(Boolean).join(' · ')||'—')}</dd>
+ <dt>Event</dt><dd>${esc(v.event_type||'—')}</dd><dt>Activities</dt><dd>${list(v.activities)}</dd><dt>Objects</dt><dd>${list(v.objects)}</dd>
+ <dt>Landmarks</dt><dd>${list(v.landmarks)}</dd><dt>Visible text</dt><dd>${list(v.visible_text)}</dd><dt>Colours</dt><dd>${list(v.dominant_colors)}</dd>
+ <dt>Mood</dt><dd>${esc(v.mood||'—')}</dd><dt>Tags</dt><dd>${list(v.tags)}</dd><dt>Matched by</dt><dd>${list(x.why)}${x.p_ctx!=null?` · context ${Math.round(100*x.p_ctx)}%`:''}${x.p_person!=null?` · person ${Math.round(100*x.p_person)}%`:''} · relevance ${Math.round(100*x.relevance)}%</dd>
+ <dt>Size</dt><dd>${x.width}×${x.height}</dd><dt>Model</dt><dd>${esc(x.vlm_model||'—')}</dd></dl>
+ <div class="ref">Reference headline (not indexed): ${esc(x.ref_title||'—')}<br><a href="${x.source_url}" target="_blank" rel="noopener">source article</a> · ${esc(x.section||'')}</div>`;
+ $('#side').classList.add('open');}
+async function run(){const q=$('#q').value.trim();history.replaceState(null,'','?q='+encodeURIComponent(q));if(!q&&!$('#person').value)return;
+ const p=new URLSearchParams({q:q||'*'});if($('#person').value)p.append('person',$('#person').value);
+ if($('#yf').value)p.set('year_from',$('#yf').value);if($('#yt').value)p.set('year_to',$('#yt').value);
+ const t=performance.now();const r=await (await fetch('/api/search?'+p)).json();r.timings.total_ms=r.timings.total_ms;
+ timing(r);$('#mb').insertAdjacentHTML('beforeend',`<span>round trip ${Math.round(performance.now()-t)} ms</span>`);grid(r);}
+async function similar(id){const t=performance.now();const r=await (await fetch('/api/similar/'+id)).json();timing(r);
+ $('#mb').insertAdjacentHTML('beforeend',`<span>round trip ${Math.round(performance.now()-t)} ms</span>`);grid(r);window.scrollTo(0,0)}
+$('#f').onsubmit=e=>{e.preventDefault();run()};$('#person').onchange=run;
+stats();
+{const q=new URLSearchParams(location.search).get('q');if(q){$('#q').value=q;run()}}
+</script>
+</body>
+</html>

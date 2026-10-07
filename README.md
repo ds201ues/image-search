@@ -36,7 +36,7 @@ uv sync
 
 uv run python -m app.ingest --dir data/sample # register, embed, faces, vlm, people
 uv run python -m app.gallery --no-bulk # optional: reference faces from Wikidata (slow, rate-limited)
-uv run uvicorn app.api:app --port 8000 # open http://localhost:8000
+uv run uvicorn app.api:app --port 8000 # open http://localhost:8000 (reporter UI; /debug = testing UI; ?debug=1 = scores)
 uv run python -m eval.run_eval --misses # quality + latency report
 ```
 

@@ -1,0 +1,38 @@
+ judged 251/648
+ judged 512/648
+judged pairs: 2180 (new judging cost $0.088 over 648 calls)
+
+FULL SYSTEM, both tiers (relevance >= 0.1)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+newsroom 40 0.76 0.72 0.87 0.97 0 0.15 34.1
+ALL 40 0.76 0.72 0.87 0.97 0 0.15 34.1 [P@10 95% 0.70-0.81]
+
+TOP TIER ONLY (relevance >= 0.5)
+type n P@10 P@10/10 nDCG R@pool empty junk/q shown
+newsroom 40 0.84 0.51 0.58 0.56 3 0.00 11.0
+ALL 40 0.84 0.51 0.58 0.56 3 0.00 11.0 [P@10 95% 0.74-0.92]
+saved eval/runs/newsroom_v1.json
+ variant siglip P@10 0.59 R@pool 0.66 junk/q 1.27
+ variant desc P@10 0.63 R@pool 0.73 junk/q 0.65
+ variant fulltext P@10 0.51 R@pool 0.56 junk/q 1.82
+ variant no_rerank P@10 0.61 R@pool 0.86 junk/q 1.02
+
+latency ms (full): p50 299 p95 507 max 638
+
+wrong results shown (grade 0) and relevant photos missed:
+ [newsroom] 'accused being taken to court by police': 0 wrong shown, 1 relevant missed
+ [newsroom] 'car crash on highway': 0 wrong shown, 1 relevant missed
+ [newsroom] 'supreme court building': 1 wrong shown, 3 relevant missed
+ [newsroom] 'police stop protesters outside government building': 0 wrong shown, 1 relevant missed
+ [newsroom] 'protesters blocking a road': 0 wrong shown, 1 relevant missed
+ [newsroom] 'students raising slogans outside university': 0 wrong shown, 1 relevant missed
+ [newsroom] 'pothole filled road after rain': 0 wrong shown, 1 relevant missed
+ [newsroom] 'people queue at municipal water tanker': 1 wrong shown, 0 relevant missed
+ [newsroom] 'villagers at dry well': 1 wrong shown, 0 relevant missed
+ [newsroom] 'badminton players on court': 0 wrong shown, 1 relevant missed
+ [newsroom] 'footballers celebrating a goal': 0 wrong shown, 2 relevant missed
+ [newsroom] 'voters queue outside polling booth': 0 wrong shown, 1 relevant missed
+ [newsroom] 'election officials checking voter lists': 1 wrong shown, 0 relevant missed
+ [newsroom] 'education minister at press conference': 2 wrong shown, 0 relevant missed
+ [newsroom] 'passenger plane on runway': 0 wrong shown, 3 relevant missed
+ [newsroom] 'highway flyover under construction': 0 wrong shown, 1 relevant missed

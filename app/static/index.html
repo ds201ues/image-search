@@ -3,124 +3,305 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Photo Desk Search</title>
+<title>Photo Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f5f2;--panel:#fff;--ink:#16161a;--muted:#6b6b73;--line:#e3e1dc;--accent:#b4232c;--chip:#efede8;--face:#ffd400}
-@media (prefers-color-scheme:dark){:root{--bg:#121214;--panel:#1b1b1f;--ink:#ececef;--muted:#9a9aa3;--line:#2c2c32;--accent:#ef5b62;--chip:#26262b}}
+:root{
+ --bg:#f4f4f1;--surface:#ffffff;--ink:#141416;--ink-2:#55555c;--ink-3:#8c8c93;--line:#e1e1dc;--line-2:#cfcfc8;
+ --accent:#c4161c;--accent-ink:#ffffff;--well:#0f0f10;--well-ink:#ededea;--chip:#ebebe6;--focus:#1b5fd6;
+ --display:"Bricolage Grotesque",Inter,system-ui,sans-serif;--body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+ --row:230px;--gap:6px;--r:4px;
+}
+:root:not([data-theme="light"]){@media (prefers-color-scheme:dark){
+ --bg:#141416;--surface:#1c1c1f;--ink:#ececea;--ink-2:#b2b2b8;--ink-3:#7c7c84;--line:#2a2a2e;--line-2:#3a3a40;
+ --accent:#ff5a5f;--accent-ink:#141416;--well:#0a0a0b;--well-ink:#ededea;--chip:#26262a;--focus:#7aa7ff;}}
+:root[data-theme="dark"]{
+ --bg:#141416;--surface:#1c1c1f;--ink:#ececea;--ink-2:#b2b2b8;--ink-3:#7c7c84;--line:#2a2a2e;--line-2:#3a3a40;
+ --accent:#ff5a5f;--accent-ink:#141416;--well:#0a0a0b;--well-ink:#ededea;--chip:#26262a;--focus:#7aa7ff;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 20px}
-.top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.brand{font-weight:700;letter-spacing:.02em;white-space:nowrap}.brand b{color:var(--accent)}
-form{flex:1;display:flex;gap:8px;min-width:280px}
-input[type=search]{flex:1;font:inherit;font-size:16px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
-input[type=search]:focus{outline:2px solid var(--accent);outline-offset:-1px}
-button{font:inherit;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
-button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.filters{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
-select,.yr{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
-.yr{width:76px}
-.stats{margin-left:auto}
-.examples{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.ex{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--chip);border:0;color:var(--ink)}
-.meta-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px;color:var(--muted);font-size:13px}
-.time{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
-.bar{display:flex;height:8px;width:260px;border-radius:99px;overflow:hidden;background:var(--chip)}
-.bar span{height:100%}
-.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
-.parsed .chip{margin-right:4px}
-.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip)}
-.chip.p{background:var(--accent);color:#fff}
-main{display:flex;gap:0}
-.grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:4px 20px 40px;align-content:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .12s}
-.card:hover{transform:translateY(-2px)}.card.sel{outline:2px solid var(--accent)}
-.card img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--chip)}
-.card .c{padding:8px 10px}
-.card .s{font-size:12.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card .d{font-size:11.5px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;gap:6px}
-aside{width:440px;flex:none;border-left:1px solid var(--line);background:var(--panel);height:calc(100vh - 150px);position:sticky;top:150px;overflow:auto;padding:16px;display:none}
-aside.open{display:block}
-.fig{position:relative}.fig img{width:100%;border-radius:8px;display:block}
-.box{position:absolute;border:2px solid var(--face);border-radius:3px}
-.box em{position:absolute;left:-2px;top:-20px;background:var(--face);color:#000;font-size:11px;font-style:normal;padding:1px 5px;border-radius:3px;white-space:nowrap}
-dl{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px;margin:14px 0}
-dt{color:var(--muted)}dd{margin:0}
-.ref{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
-.notice{grid-column:1/-1;padding:10px 14px;border-radius:10px;background:var(--chip);font-size:13px}
-.empty{padding:60px 20px;color:var(--muted);text-align:center;grid-column:1/-1}
-.x{float:right}
-@media (max-width:900px){aside{position:fixed;inset:auto 0 0 0;width:auto;height:70vh;top:auto;border-top:1px solid var(--line);z-index:9}.bar{width:160px}}
-.card.possible{opacity:.75}</style>
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);font-feature-settings:"cv11","ss01"}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+a{color:inherit}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- header: the search is the headline ---------- */
+header{padding:22px clamp(16px,3vw,40px) 0;position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.masthead{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.brand{font:600 15px/1 var(--display);letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+.brand i{display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px}
+.archive{font:12px/1 var(--mono);color:var(--ink-3)}
+.searchrow{display:flex;align-items:center;gap:10px;margin-top:14px;border-bottom:2px solid var(--ink);padding-bottom:8px;transition:border-color .15s}
+.searchrow:focus-within{border-color:var(--accent)}
+.searchrow svg{flex:none;width:22px;height:22px;color:var(--ink-3)}
+#q{flex:1;min-width:0;border:0;outline:none;background:none;padding:4px 0;font:500 clamp(20px,2.6vw,30px)/1.2 var(--display);letter-spacing:-.01em;color:var(--ink)}
+#q::placeholder{color:var(--ink-3)}
+#q::-webkit-search-cancel-button{display:none}
+.clear{color:var(--ink-3);font-size:13px;padding:4px 8px;border-radius:var(--r)}
+.clear:hover{color:var(--ink)}
+.go{background:var(--ink);color:var(--bg);font-weight:600;padding:9px 16px;border-radius:var(--r);white-space:nowrap}
+.go:hover{background:var(--accent);color:var(--accent-ink)}
+.subrow{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:10px 0 12px;min-height:44px}
+.hint{color:var(--ink-3);font-size:12.5px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap}
+.sugg button{font-size:12.5px;color:var(--ink-2);padding:4px 10px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface)}
+.sugg button:hover{border-color:var(--ink);color:var(--ink)}
+.controls{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r);padding:0 8px;height:30px}
+.ctl input{width:48px;border:0;background:none;padding:0;text-align:center;font:500 12.5px var(--mono);color:var(--ink)}
+.ctl input::-webkit-inner-spin-button{display:none}
+.ctl select{border:0;background:none;max-width:200px;color:var(--ink);padding:0}
+.ctl.on{border-color:var(--ink)}
+
+/* ---------- status line ---------- */
+.status{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px clamp(16px,3vw,40px) 6px;color:var(--ink-2);font-size:13px;min-height:40px}
+.status b{color:var(--ink);font-weight:600}
+.status .ms{font:12px var(--mono);color:var(--ink-3)}
+.understood{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--ink-2)}
+.tag.person{background:var(--ink);color:var(--bg)}
+.tag.person.maybe{background:var(--chip);color:var(--ink-2);border:1px dashed var(--line-2)}
+.status .warn{color:var(--accent)}
+
+/* ---------- results: justified rows, whole images ---------- */
+main{padding:0 clamp(16px,3vw,40px) 80px}
+.tier{margin-top:18px}
+.tier h2{font:600 13px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.tier h2 small{font:12px var(--mono);letter-spacing:0;text-transform:none;color:var(--ink-3)}
+.tier h2.best::before{content:"";width:8px;height:8px;background:var(--accent);border-radius:1px}
+.rows{display:flex;flex-wrap:wrap;gap:var(--gap)}
+.rows::after{content:"";flex-grow:1e6;flex-basis:0;min-width:0}
+.ph{position:relative;flex-grow:calc(var(--ar) * 100);flex-basis:calc(var(--ar) * var(--row));aspect-ratio:var(--ar);min-width:0;margin:0;border-radius:var(--r);overflow:hidden;background:var(--chip);cursor:zoom-in;outline-offset:-2px}
+.ph img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .25s}
+.ph img.in{opacity:1}
+.ph .cap{position:absolute;inset:auto 0 0 0;padding:28px 10px 8px;color:#fff;font-size:12px;line-height:1.35;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.72) 100%);opacity:0;transition:opacity .15s;pointer-events:none}
+.ph .cap .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty}
+.ph .cap .m{display:flex;gap:8px;margin-top:4px;font:11px var(--mono);color:rgba(255,255,255,.75)}
+.ph:hover .cap,.ph:focus-visible .cap{opacity:1}
+.ph .who{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100% - 16px)}
+.ph .who span{font-size:11px;font-weight:500;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.92);color:#141416;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.ph .who span.maybe{background:rgba(20,20,22,.6);color:#fff;border:1px dashed rgba(255,255,255,.5)}
+.tier.more .ph{filter:saturate(.85)}
+.tier.more .ph:hover{filter:none}
+@media (hover:none){.ph .cap{opacity:1}}
+@media (max-width:720px){:root{--row:150px}.subrow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:8px}.subrow::-webkit-scrollbar{display:none}.sugg{flex-wrap:nowrap}.sugg button{white-space:nowrap}.controls{margin-left:0;flex-wrap:nowrap}}
+
+/* skeleton + empty */
+.skel{display:flex;gap:var(--gap);flex-wrap:wrap;margin-top:18px}
+.skel i{display:block;height:var(--row);border-radius:var(--r);background:linear-gradient(90deg,var(--chip),var(--surface),var(--chip));background-size:200% 100%;animation:sh 1.2s infinite;flex-grow:1;flex-basis:280px}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{max-width:560px;margin:60px auto;text-align:center;color:var(--ink-2)}
+.empty h3{font:600 22px/1.25 var(--display);color:var(--ink);margin:0 0 8px;letter-spacing:-.01em}
+.empty p{margin:0 0 14px}
+.empty .sugg{justify-content:center}
+.start{max-width:760px;margin:48px auto 0}
+.start h3{font:600 clamp(26px,4vw,40px)/1.1 var(--display);letter-spacing:-.02em;margin:0 0 10px}
+.start p{color:var(--ink-2);font-size:15px;margin:0 0 22px;max-width:52ch}
+.start .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px 24px;margin-top:26px}
+.start h4{font:600 12px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+.start .cols button{display:block;text-align:left;color:var(--ink);padding:5px 0;font-size:14px;border-bottom:1px solid var(--line);width:100%}
+.start .cols button:hover{color:var(--accent)}
+
+/* ---------- viewer ---------- */
+dialog.viewer{border:0;padding:0;background:transparent;max-width:100vw;max-height:100vh;width:100vw;height:100vh;margin:0}
+dialog.viewer::backdrop{background:rgba(8,8,9,.9)}
+.vwrap{display:grid;grid-template-columns:1fr 400px;height:100%;background:var(--well);color:var(--well-ink)}
+.stage{position:relative;display:grid;place-items:center;min-width:0;min-height:0;padding:20px}
+.stage img{max-width:100%;max-height:calc(100vh - 40px);width:auto;height:auto;object-fit:contain;display:block;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.stage .boxes{position:absolute;pointer-events:none}
+.stage .box{position:absolute;border:1.5px solid #ffd400;border-radius:2px}
+.stage .box em{position:absolute;left:-1.5px;bottom:100%;background:#ffd400;color:#000;font:11px var(--mono);font-style:normal;padding:1px 5px;white-space:nowrap}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.08);border-radius:var(--r);opacity:.7}
+.nav:hover{opacity:1;background:rgba(255,255,255,.16)}
+.nav.prev{left:14px}.nav.next{right:14px}
+.nav svg{width:22px;height:22px}
+.counter{position:absolute;left:20px;bottom:16px;font:12px var(--mono);color:rgba(255,255,255,.6)}
+.panel{background:var(--surface);color:var(--ink);overflow:auto;display:flex;flex-direction:column;border-left:1px solid var(--line)}
+.panel .head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.panel .head .k{font:12px var(--mono);color:var(--ink-3)}
+.close{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r);color:var(--ink-2)}
+.close:hover{background:var(--chip);color:var(--ink)}
+.close svg{width:18px;height:18px}
+.panel .body{padding:18px;flex:1}
+.panel .caption{font:500 16px/1.4 var(--display);letter-spacing:-.005em;margin:0 0 6px;text-wrap:pretty}
+.panel .headline{color:var(--ink-2);margin:0 0 14px;font-size:13.5px}
+.panel .ai{font-size:13.5px;color:var(--ink-2);margin:0 0 14px;padding-left:10px;border-left:2px solid var(--line-2)}
+.panel .ai small{display:block;font:11px var(--mono);color:var(--ink-3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.facts{display:grid;grid-template-columns:92px 1fr;gap:9px 12px;font-size:13.5px;margin:16px 0}
+.facts dt{color:var(--ink-3);font-size:12.5px;padding-top:1px}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.facts dd.mono{font:12.5px var(--mono)}
+.people{display:flex;flex-wrap:wrap;gap:5px}
+.people span{font-size:12.5px;padding:2px 9px;border-radius:99px;background:var(--ink);color:var(--bg)}
+.people span.maybe{background:var(--chip);color:var(--ink-2);border:1px dashed var(--line-2)}
+.kw{display:flex;flex-wrap:wrap;gap:4px}
+.kw span{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--chip);color:var(--ink-2)}
+.actions{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--r);border:1px solid var(--line-2);font-weight:500;font-size:13.5px;text-decoration:none;background:var(--surface)}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn svg{width:15px;height:15px}
+.debug{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line-2);font:12px/1.5 var(--mono);color:var(--ink-3);white-space:pre-wrap}
+@media (max-width:900px){.vwrap{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.stage img{max-height:55vh}.panel{max-height:45vh;border-left:0;border-top:1px solid var(--line)}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:var(--r);font-size:13px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
 </head>
 <body>
 <header>
- <div class="top">
- <div class="brand">PHOTO<b>DESK</b> search</div>
- <form id="f"><input type="search" id="q" placeholder="Describe the photo: modi in pink jacket, priyanka gandhi in parliament, flooded street…" autofocus>
- <button class="primary">Search</button></form>
+ <div class="masthead">
+ <div class="brand"><i></i>Photo Desk</div>
+ <div class="archive" id="archive"></div>
  </div>
- <div class="filters">
- Person <select id="person"><option value="">Anyone</option></select>
- Year <input class="yr" id="yf" type="number" placeholder="from"> – <input class="yr" id="yt" type="number" placeholder="to">
- <span class="stats" id="stats"></span>
+ <form id="f" role="search">
+ <div class="searchrow">
+ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+ <label class="sr" for="q">Describe the photo you need</label>
+ <input type="search" id="q" placeholder="Describe the photo you need" autocomplete="off" autofocus spellcheck="false">
+ <button type="button" class="clear" id="clear" hidden>Clear</button>
+ <button class="go" type="submit">Search</button>
  </div>
- <div class="examples" id="examples"></div>
+ <div class="subrow">
+ <span class="hint" id="hint">Try</span>
+ <div class="sugg" id="sugg"></div>
+ <div class="controls">
+ <label class="ctl" id="yearctl"><span>Year</span><input id="yf" type="number" placeholder="from" min="1950" max="2030"><span>–</span><input id="yt" type="number" placeholder="to" min="1950" max="2030"></label>
+ <label class="ctl" id="personctl"><span class="sr">Person</span><select id="person"><option value="">Anyone</option></select></label>
+ </div>
+ </div>
+ </form>
 </header>
-<div class="meta-bar" id="mb"></div>
-<main><div class="grid" id="grid"><div class="empty">Type a sentence describing the photo you need.</div></div><aside id="side"></aside></main>
+<div class="status" id="status"></div>
+<main id="main"></main>
+
+<dialog class="viewer" id="viewer">
+ <div class="vwrap">
+ <div class="stage" id="stage">
+ <img id="big" alt="">
+ <div class="boxes" id="boxes"></div>
+ <button class="nav prev" id="prev" aria-label="Previous photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+ <button class="nav next" id="next" aria-label="Next photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+ <div class="counter" id="counter"></div>
+ </div>
+ <aside class="panel" id="panel"></aside>
+ </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
 <script>
-const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const STAGES=[['parse_ms','#8e8e96','parse'],['people_ms','#b4232c','people'],['vectors_ms','#3f7de0','vectors'],['text_ms','#e0a03f','text'],['rerank_ms','#7d4fe0','rerank'],['fetch_ms','#5b5b63','fetch'],['vector_ms','#16a085','vector']];
-const EX=['modi in pink jacket','cricket team celebrating','protest with flags on street','press conference with microphones','fire at night','politician addressing a rally','bollywood actor at an event','flooded road','woman athlete with indian flag','airport aircraft'];
-$('#examples').innerHTML=EX.map(e=>`<button class="ex">${e}</button>`).join('');
-$('#examples').onclick=e=>{if(e.target.matches('.ex')){$('#q').value=e.target.textContent;run()}};
-let last=null;
-async function stats(){const s=await (await fetch('/api/stats')).json();
- $('#stats').textContent=`${s.images} images · ${s.described} described · ${s.people_found} people · ${s.faces} faces in ${s.face_clusters} clusters · gallery ${s.gallery_size}`;
- $('#person').innerHTML='<option value="">Anyone</option>'+s.people.map(p=>`<option value="${p.id}">${esc(p.name)} (${p.images})</option>`).join('');}
-function timing(r){const T=r.timings, total=T.total_ms||1;
- const bar=STAGES.filter(([k])=>T[k]!=null).map(([k,c])=>`<span title="${k} ${T[k]} ms" style="width:${100*T[k]/total}%;background:${c}"></span>`).join('');
- const leg=STAGES.filter(([k])=>T[k]!=null).map(([k,c,l])=>`<span><i style="background:${c}"></i>${l} ${T[k]}</span>`).join('');
- const parsed=(r.persons||[]).map(p=>`<span class="chip ${p.p_link>=0.5?'p':''}" title="link ${Math.round(100*p.p_link)}%">${esc(p.name)}${p.p_link<0.5?'?':''}</span>`).join('')+((r.years||[])[0]?`<span class="chip">${r.years[0]}–${r.years[1]}</span>`:'');
- $('#mb').innerHTML=`<span><span class="time">${r.count}</span> results in <span class="time">${T.total_ms} ms</span>${T.server_ms?` (server ${T.server_ms} ms)`:''}</span>
- <span class="bar">${bar}</span><span class="legend">${leg}</span>${parsed?`<span class="parsed">understood: ${parsed}</span>`:''}`;}
-function grid(r){last=r;
- const notes=[];
- if((r.persons_missing||[]).length) notes.push(`No photos recognised as ${r.persons_missing.map(esc).join(', ')} yet.`);
- const note=notes.map(n=>`<div class="notice">${n}</div>`).join('');
- const chips=x=>x.people.map(p=>`<span class="chip p">${esc(p)}</span>`).join(' ')+(x.people_possible||[]).map(p=>`<span class="chip" title="possible match">${esc(p)}?</span>`).join(' ');
- $('#grid').innerHTML=note+(r.results.length?r.results.map((x,i)=>`${x.tier==='possible'&&(i===0||r.results[i-1].tier!=='possible')?'<div class="divider" style="grid-column:1/-1;color:#999;border-top:1px solid #333;padding:8px 0 2px;font-size:13px">Possible matches</div>':''}<div class="card${x.tier==='possible'?' possible':''}" data-i="${i}"><img loading="lazy" src="${x.thumb}" alt="">
- <div class="c"><div class="s">${esc(x.vlm?.summary||x.file)}</div>
- <div class="d"><span>${chips(x)}</span><span>${x.relevance!=null?`<b title="relevance">${Math.round(100*x.relevance)}%</b> · `:''}${x.date||''}</span></div></div></div>`).join('')
- :(note?'':'<div class="empty">No confident matches. Try describing the photo differently.</div>'));}
-$('#grid').onclick=e=>{const c=e.target.closest('.card');if(!c)return;document.querySelectorAll('.card.sel').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');const x=last.results[+c.dataset.i];detail(x);fetch('/api/click',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:last.query,image_id:x.id,rank:+c.dataset.i+1,action:'open'})});};
-function list(a){return (a||[]).length?a.map(esc).join(', '):'—'}
-function detail(x){const v=x.vlm||{};
- const boxes=(x.faces||[]).map(f=>{const [bx,by,bw,bh]=f.bbox;return `<div class="box" style="left:${100*bx/x.width}%;top:${100*by/x.height}%;width:${100*bw/x.width}%;height:${100*bh/x.height}%">${f.name?`<em>${esc(f.name)} ${f.score}</em>`:''}</div>`}).join('');
- const people=(v.people||[]).map(p=>`<div>• ${esc(p.description)}${p.clothing?` — ${esc(p.clothing)}`:''}${p.action?`; ${esc(p.action)}`:''}</div>`).join('')||'—';
- $('#side').innerHTML=`<button class="x" onclick="$('#side').classList.remove('open')">Close</button>
- <button onclick="similar('${x.id}')">More like this</button>
- <div class="fig" style="margin-top:12px"><img src="${x.full}" alt="">${boxes}</div>
- <p>${esc(v.summary||'Not described yet (VLM step not run).')}</p>
- <dl><dt>People</dt><dd>${(x.people_sources||[]).map(p=>`${esc(p.name)} <b>${Math.round(100*p.score)}%</b> <span class="chip">${(p.evidence||[]).map(esc).join(' · ')}</span>`).join('<br>')||'—'}</dd><dt>Date</dt><dd>${x.date||'—'}</dd><dt>Type</dt><dd>${esc(v.image_type||'—')}</dd>
- <dt>Described</dt><dd>${people}</dd><dt>Place</dt><dd>${esc([v.place_type,v.location_guess].filter(Boolean).join(' · ')||'—')}</dd>
- <dt>Event</dt><dd>${esc(v.event_type||'—')}</dd><dt>Activities</dt><dd>${list(v.activities)}</dd><dt>Objects</dt><dd>${list(v.objects)}</dd>
- <dt>Landmarks</dt><dd>${list(v.landmarks)}</dd><dt>Visible text</dt><dd>${list(v.visible_text)}</dd><dt>Colours</dt><dd>${list(v.dominant_colors)}</dd>
- <dt>Mood</dt><dd>${esc(v.mood||'—')}</dd><dt>Tags</dt><dd>${list(v.tags)}</dd><dt>Matched by</dt><dd>${list(x.why)}${x.p_ctx!=null?` · context ${Math.round(100*x.p_ctx)}%`:''}${x.p_person!=null?` · person ${Math.round(100*x.p_person)}%`:''} · relevance ${Math.round(100*x.relevance)}%</dd>
- <dt>Size</dt><dd>${x.width}×${x.height}</dd><dt>Model</dt><dd>${esc(x.vlm_model||'—')}</dd></dl>
- <div class="ref">Reference headline (not indexed): ${esc(x.ref_title||'—')}<br><a href="${x.source_url}" target="_blank" rel="noopener">source article</a> · ${esc(x.section||'')}</div>`;
- $('#side').classList.add('open');}
-async function run(){const q=$('#q').value.trim();history.replaceState(null,'','?q='+encodeURIComponent(q));if(!q&&!$('#person').value)return;
- const p=new URLSearchParams({q:q||'*'});if($('#person').value)p.append('person',$('#person').value);
- if($('#yf').value)p.set('year_from',$('#yf').value);if($('#yt').value)p.set('year_to',$('#yt').value);
- const t=performance.now();const r=await (await fetch('/api/search?'+p)).json();r.timings.total_ms=r.timings.total_ms;
- timing(r);$('#mb').insertAdjacentHTML('beforeend',`<span>round trip ${Math.round(performance.now()-t)} ms</span>`);grid(r);}
-async function similar(id){const t=performance.now();const r=await (await fetch('/api/similar/'+id)).json();timing(r);
- $('#mb').insertAdjacentHTML('beforeend',`<span>round trip ${Math.round(performance.now()-t)} ms</span>`);grid(r);window.scrollTo(0,0)}
-$('#f').onsubmit=e=>{e.preventDefault();run()};$('#person').onchange=run;
-stats();
-{const q=new URLSearchParams(location.search).get('q');if(q){$('#q').value=q;run()}}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DEBUG=new URLSearchParams(location.search).has('debug');
+const EXAMPLES=['delhi smog over india gate','flooded street people wading','farmers protest with tractors','rahul gandhi smiling','cricket team celebrating with trophy','traffic jam on highway','students celebrating exam results','police lathi charge on protesters'];
+const STARTERS={
+ 'Civic & weather':['delhi smog over india gate','flooded street people wading','traffic jam on highway','garbage dump in city','potholes on road after rain'],
+ 'Politics':['rahul gandhi smiling','modi in pink jacket','chief minister addressing a rally','oath taking ceremony of ministers','voters queue at polling booth'],
+ 'Sport & culture':['cricket team celebrating with trophy','kabaddi match','ganesh visarjan procession','fashion show models on ramp','classical dance performance on stage'],
+};
+let res=null, cur=-1, stats=null;
+const fmtDate=d=>d?new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
+const recent=()=>{try{return JSON.parse(localStorage.recent||'[]')}catch{return[]}};
+const remember=q=>{try{localStorage.recent=JSON.stringify([q,...recent().filter(x=>x!==q)].slice(0,6))}catch{}};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ---- header ---- */
+function suggestions(){const r=recent();const list=[...r,...EXAMPLES.filter(e=>!r.includes(e))].slice(0,6);$('#hint').textContent=r.length?'Recent':'Try';
+ $('#sugg').innerHTML=list.map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('#q').value=b.dataset.q;run()}});
+$('#q').addEventListener('input',()=>{$('#clear').hidden=!$('#q').value});
+$('#clear').onclick=()=>{$('#q').value='';$('#clear').hidden=true;$('#q').focus();history.replaceState(null,'',location.pathname);start()};
+$('#f').onsubmit=e=>{e.preventDefault();run()};
+$('#person').onchange=run;$('#yf').onchange=$('#yt').onchange=()=>{if(res)run()};
+document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)&&!$('#viewer').open){e.preventDefault();$('#q').focus();$('#q').select()}});
+
+async function loadStats(){try{stats=await (await fetch('/api/stats')).json();
+ $('#archive').textContent=`${stats.images.toLocaleString('en-IN')} photos · ${stats.date_min?.slice(0,4)||''}–${stats.date_max?.slice(0,4)||''}`;
+ $('#person').innerHTML='<option value="">Anyone</option>'+stats.people.slice(0,400).map(p=>`<option value="${p.id}">${esc(p.name)} (${p.images})</option>`).join('');}catch{}}
+
+/* ---- start screen ---- */
+function start(){$('#status').innerHTML='';
+ $('#main').innerHTML=`<section class="start"><h3>Find the photo while you write.</h3>
+ <p>Describe it in a sentence, the way you would ask the photo desk: who is in it, what is happening, where. Names, years and Hinglish are understood.</p>
+ <div class="cols">${Object.entries(STARTERS).map(([h,qs])=>`<div><h4>${h}</h4>${qs.map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`).join('')}</div></section>`}
+
+/* ---- search ---- */
+let inflight=0;
+async function run(){const q=$('#q').value.trim(),pid=$('#person').value;if(!q&&!pid)return;
+ const p=new URLSearchParams({q:q||'*'});if(pid)p.append('person',pid);if($('#yf').value)p.set('year_from',$('#yf').value);if($('#yt').value)p.set('year_to',$('#yt').value);
+ history.replaceState(null,'','?'+new URLSearchParams({q,...(DEBUG?{debug:1}:{})}));$('#clear').hidden=!q;
+ $('#yearctl').classList.toggle('on',!!($('#yf').value||$('#yt').value));$('#personctl').classList.toggle('on',!!pid);
+ const id=++inflight;
+ $('#status').innerHTML=`<span>Searching ${stats?stats.images.toLocaleString('en-IN'):'the'} photos…</span>`;
+ $('#main').innerHTML=`<div class="skel">${'<i></i>'.repeat(8)}</div>`;
+ const t0=performance.now();let r;
+ try{r=await (await fetch('/api/search?'+p)).json()}catch(e){if(id!==inflight)return;$('#status').innerHTML='<span class="warn">The archive did not answer. Try again in a moment.</span>';$('#main').innerHTML='';return}
+ if(id!==inflight)return;
+ if(q)remember(q);suggestions();res=r;render(r,performance.now()-t0)}
+
+function statusLine(r,ms){const n=r.results.length,best=r.results.filter(x=>x.tier==='match').length;
+ const who=(r.persons||[]).map(p=>`<span class="tag person ${p.p_link<0.5?'maybe':''}">${esc(p.name)}${p.p_link<0.5?'?':''}</span>`).join('');
+ const yrs=(r.years||[])[0]?`<span class="tag">${r.years[0]}${r.years[1]&&r.years[1]!==r.years[0]?'–'+r.years[1]:''}</span>`:'';
+ const rew=r.parsed?.rewrite&&r.parsed.rewrite.toLowerCase()!==r.query.toLowerCase()?`<span class="tag" title="How the query was read">read as “${esc(r.parsed.rewrite)}”</span>`:'';
+ const missing=(r.persons_missing||[]).length?`<span class="warn">No photos of ${r.persons_missing.map(esc).join(', ')} in the archive yet.</span>`:'';
+ return `<span>${n?`<b>${n}</b> photo${n===1?'':'s'}${best&&best<n?`, <b>${best}</b> strong`:''}`:'<b>No</b> confident match'}</span>
+ ${who||yrs||rew?`<span class="understood">${who}${yrs}${rew}</span>`:''}${missing}<span class="ms">${Math.round(ms)} ms</span>`}
+
+function card(x,i){const ar=(x.width&&x.height)?Math.min(Math.max(x.width/x.height,0.5),2.6):1.5;
+ const text=x.caption||x.headline||x.vlm?.summary||'';
+ const who=x.people.slice(0,2).map(p=>`<span>${esc(p)}</span>`).join('')+(x.people.length>2?`<span>+${x.people.length-2}</span>`:'')+(!x.people.length&&x.people_possible?.length?`<span class="maybe">${esc(x.people_possible[0])}?</span>`:'');
+ return `<figure class="ph" style="--ar:${ar.toFixed(3)}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(text.slice(0,120))}">
+ <img loading="lazy" src="${x.thumb}" alt="" onload="this.classList.add('in')">
+ ${who?`<div class="who">${who}</div>`:''}
+ <figcaption class="cap"><div class="t">${esc(text)}</div><div class="m">${x.date?`<span>${fmtDate(x.date)}</span>`:''}${x.city?`<span>${esc(x.city)}</span>`:''}</div></figcaption></figure>`}
+
+function render(r,ms){$('#status').innerHTML=statusLine(r,ms);
+ if(!r.results.length){$('#main').innerHTML=`<div class="empty"><h3>Nothing confident for “${esc(r.query)}”.</h3>
+ <p>Try naming what is visible in the frame: the place, the activity, the people. Or widen the year range.</p>
+ <div class="sugg">${EXAMPLES.slice(0,4).map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>`;return}
+ const best=r.results.map((x,i)=>[x,i]).filter(([x])=>x.tier!=='possible'),more=r.results.map((x,i)=>[x,i]).filter(([x])=>x.tier==='possible');
+ const sec=(cls,title,items)=>items.length?`<section class="tier ${cls}"><h2 class="${cls}">${title}<small>${items.length}</small></h2><div class="rows">${items.map(([x,i])=>card(x,i)).join('')}</div></section>`:'';
+ $('#main').innerHTML=sec('best',r.query.startsWith('similar to')?'Similar photos':'Best matches',best)+sec('more','Also consider',more);}
+$('#main').addEventListener('click',e=>{const c=e.target.closest('.ph');if(c)open(+c.dataset.i)});
+$('#main').addEventListener('keydown',e=>{const c=e.target.closest('.ph');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(+c.dataset.i)}});
+
+/* ---- viewer ---- */
+const V=$('#viewer');
+function open(i){cur=i;show();if(!V.open)V.showModal();
+ const x=res.results[i];fetch('/api/click',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:res.query,image_id:x.id,rank:i+1,action:'open'})})}
+function show(){const x=res.results[cur],v=x.vlm||{};const big=$('#big');big.src=x.thumb;$('#boxes').innerHTML='';
+ big.onload=()=>{if(!DEBUG||!(x.faces||[]).length)return;const b=$('#boxes');const r=big.getBoundingClientRect(),s=$('#stage').getBoundingClientRect();
+ b.style.cssText=`left:${r.left-s.left}px;top:${r.top-s.top}px;width:${r.width}px;height:${r.height}px`;
+ b.innerHTML=x.faces.map(f=>{const [bx,by,bw,bh]=f.bbox;return `<div class="box" style="left:${100*bx/x.width}%;top:${100*by/x.height}%;width:${100*bw/x.width}%;height:${100*bh/x.height}%">${f.name?`<em>${esc(f.name)} ${f.score}</em>`:''}</div>`}).join('')};
+ $('#counter').textContent=`${cur+1} / ${res.results.length}`;$('#prev').style.visibility=cur>0?'visible':'hidden';$('#next').style.visibility=cur<res.results.length-1?'visible':'hidden';
+ const people=[...x.people.map(p=>`<span>${esc(p)}</span>`),...(x.people_possible||[]).map(p=>`<span class="maybe" title="Likely, not confirmed">${esc(p)}?</span>`)].join('');
+ const described=v.summary&&v.summary!==x.caption?`<p class="ai"><small>What the photo shows</small>${esc(v.summary)}</p>`:'';
+ const facts=[['Date',x.date?fmtDate(x.date):null],['Place',[x.city,v.location_guess&&!x.city?v.location_guess:null].filter(Boolean).join(', ')||null],
+ ['People',people?`<div class="people">${people}</div>`:null],['Photographer',x.byline],['Credit',x.credit],
+ ['Keywords',(x.keywords||[]).length?`<div class="kw">${x.keywords.slice(0,12).map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:null],
+ ['Size',x.width&&x.height?`${x.width} × ${x.height}`:null],['File',x.file?`<span class="mono">${esc(x.file.split('/').pop())}</span>`:null]];
+ const dbg=DEBUG?`<div class="debug">relevance ${x.relevance} context ${x.p_ctx} person ${x.p_person??'—'}\nvia ${(x.why||[]).join(', ')}\n${(x.people_sources||[]).map(p=>`${p.name} ${p.score} [${(p.evidence||[]).join(' ')}]`).join('\n')}\n${esc(JSON.stringify(v,null,1))}</div>`:'';
+ $('#panel').innerHTML=`<div class="head"><span class="k">${esc(x.id.slice(0,8))}</span><button class="close" id="close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+ <div class="body">${x.caption?`<p class="caption">${esc(x.caption)}</p>`:x.headline?`<p class="caption">${esc(x.headline)}</p>`:`<p class="caption">${esc(v.summary||'No caption')}</p>`}
+ ${x.headline&&x.caption?`<p class="headline">${esc(x.headline)}</p>`:''}${x.caption?described:''}
+ <dl class="facts">${facts.filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>${dbg}</div>
+ <div class="actions"><a class="btn primary" href="${x.original}" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12m0 0 5-5m-5 5-5-5M4 20h16"/></svg>Download original</a>
+ <button class="btn" id="copyid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>Copy ID</button>
+ <button class="btn" id="more">More like this</button></div>`;
+ $('#close').onclick=()=>V.close();$('#copyid').onclick=()=>{navigator.clipboard?.writeText(x.id);toast('Photo ID copied')};
+ $('#more').onclick=async()=>{V.close();$('#status').innerHTML='<span>Finding similar photos…</span>';const t=performance.now();const r=await (await fetch('/api/similar/'+x.id)).json();r.query=`similar to ${x.id}`;res=r;render(r,performance.now()-t);window.scrollTo(0,0)}}
+$('#prev').onclick=()=>{if(cur>0){cur--;show()}};$('#next').onclick=()=>{if(cur<res.results.length-1){cur++;show()}};
+V.addEventListener('click',e=>{if(e.target===V||e.target.id==='stage')V.close()});
+V.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')$('#prev').click();if(e.key==='ArrowRight')$('#next').click()});
+
+/* ---- boot ---- */
+suggestions();loadStats();
+{const q=new URLSearchParams(location.search).get('q');if(q){$('#q').value=q;$('#clear').hidden=false;run()}else start()}
 </script>
 </body>
 </html>

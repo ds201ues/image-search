@@ -99,3 +99,45 @@ concept | politician garlanded by supporters
 concept | army parade with tanks
 concept | temple festival chariot
 concept | market vegetables vendors
+# newsroom queries: city-desk topics phrased the way a reporter asks while writing a story.
+# One topic per block, phrased the way a reporter asks while writing the story. City desk topics dominate the headline count.
+newsroom | police inspect a crime scene
+newsroom | accused being taken to court by police
+newsroom | car crash on highway
+newsroom | ambulance at accident site
+newsroom | students checking exam results on phones
+newsroom | students outside examination hall
+newsroom | lawyers outside high court
+newsroom | supreme court building
+newsroom | opposition leaders marching in delhi
+newsroom | police stop protesters outside government building
+newsroom | protesters blocking a road
+newsroom | students raising slogans outside university
+newsroom | garba during navratri
+newsroom | durga puja pandal crowd
+newsroom | ramlila performance
+newsroom | cars crawling in delhi traffic
+newsroom | traffic police directing vehicles at junction
+newsroom | smog over delhi in winter morning
+newsroom | water sprinkling on dusty road
+newsroom | workers repairing rain damaged road
+newsroom | pothole filled road after rain
+newsroom | people queue at municipal water tanker
+newsroom | garbage dump with municipal workers
+newsroom | drought hit farmer in dry field
+newsroom | villagers at dry well
+newsroom | india players celebrating a wicket
+newsroom | packed cricket stadium crowd
+newsroom | badminton players on court
+newsroom | footballers celebrating a goal
+newsroom | indian athletes with medals
+newsroom | candidate meeting voters door to door
+newsroom | voters queue outside polling booth
+newsroom | election officials checking voter lists
+newsroom | education minister at press conference
+newsroom | children reading in government school classroom
+newsroom | food inspectors checking restaurant kitchen
+newsroom | police display seized drugs
+newsroom | injured man being treated in hospital
+newsroom | passenger plane on runway
+newsroom | highway flyover under construction

@@ -365,3 +365,35 @@ Concept taxonomy (event/setting/roles/sport/occasion/landmark) as closed vocabul
 - Cheapest vision LLM APIs 2026: https://www.clawrouters.com/blog/cheapest-vision-multimodal-llm-api-2026
 - GPT-6 Luna pricing: https://openrouter.ai/openai/gpt-6-luna
 - GPT-6 Sol and Luna release: https://www.requesty.ai/blog/gpt-6-sol-luna-pricing-release-api
+
+## 13. Reporter UI and newsroom test scenarios (2026-10-07)
+
+### Who the user is
+Decided with the PM: the user is a reporter writing a story who needs a photo for it. How the photo is used afterwards (CMS, download)
+is still open, so the UI ends at "download original / copy ID". Sentence search only; "paste the article, suggest photos" comes later.
+
+### UI (app/static/index.html, old testing page kept at /debug)
+- Testing UI problems: grid cards cropped every photo to 16:10; the side panel loaded `/media/<file>` but archive `file` paths are
+ absolute (outside data/), so the original 404'd and never rendered; the panel height was computed from a header that changed size.
+- Reporter UI: one big search line, recent/suggested queries, year and person filters. Results as justified rows of whole images,
+ two tiers ("Best matches", "Also consider"), people chips on the photo, caption/date/city on hover. Viewer: full image (768px thumb,
+ instant), caption + headline, Luna description only when it adds to the caption, date, place, people (confirmed / likely), photographer,
+ credit, keywords, size, file; actions: download original (`/original/<id>`), copy ID, more like this; keyboard left/right, Esc, `/`.
+ `?debug=1` adds relevance/context/person scores, why-matched, face boxes and the raw description. Light and dark; phone layout.
+
+### Newsroom test scenarios (eval type `newsroom`, 40 queries)
+Newsroom eval queries are city-desk topics (crime, roads, courts, festivals, civic work). City desk dominates: murder 58, road accident 30, exam results 29, crime 26, court case 23, protest 37,
+festival 18, traffic 13, civic infrastructure 12, water supply 12, air pollution 10, waste 10, drought 9. Luna drafted 3 photo requests
+per topic; 40 were curated into `eval/hand_queries.txt`.
+
+| newsroom (n=40), 33,759 photos | P@10 | R@pool | empty | junk/q | shown |
+|---|---|---|---|---|---|
+| both tiers (>= 0.1) | 0.75 [0.70-0.81] | 0.97 | 0 | 0.17 | 34 |
+| top tier (>= 0.5) | 0.84 [0.74-0.92] | 0.56 | 3 | 0.00 | 11 |
+| single retriever alone | 0.51-0.63 | 0.56-0.73 | | 0.65-1.82 | |
+Latency p50 299 ms, p95 507 ms (Jev scores cached from the pool run; live ~0.8-1.0 s). Judging cost $0.26.
+In line with the general eval (0.78 / 0.83). 13 of 40 queries score >= 0.9; the weak ones (water tanker queue 0.43, dry well 0.43,
+food inspectors 0.5, road repair 0.55, door-to-door campaign 0.55) are "right topic, not the exact scene": the judge gives half credit
+(tanker without a queue, dry field without a well). Junk is near zero, so the loss is specificity, not noise, and for several of these
+the archive sample probably holds no exact photo (pool had no fully relevant photo for the two 0.43 queries). Nothing to fix per query;
+the lever is still stage 2 (section 12 open item 2) and a bigger archive.

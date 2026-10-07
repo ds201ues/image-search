@@ -379,7 +379,7 @@ def hydrate(conn, ids):
  (SELECT coalesce(json_agg(json_build_object('name', p.name, 'score', round(f.match_score::numeric, 2), 'bbox', f.bbox,
  'cluster', f.cluster_id)), '[]')
  FROM {TABLES["faces"]} f LEFT JOIN {TABLES["persons"]} p ON p.id = f.person_id WHERE f.image_id = i.id),
- i.caption, i.city, i.byline
+ i.caption, i.city, i.byline, i.headline, i.keywords, i.credit, i.orig_file
  FROM {TABLES["images"]} i WHERE i.id = ANY(%s)""", (ids,)).fetchall()
  by = {r[0]: r for r in rows}
  out = []
@@ -391,7 +391,9 @@ def hydrate(conn, ids):
  "section": r[5], "source_url": r[6], "ref_title": r[7], "vlm": r[8], "vlm_model": r[9],
  "people": [p["name"] for p in ppl if p["score"] >= PERSON_SURE],
  "people_possible": [p["name"] for p in ppl if PERSON_MIN <= p["score"] < PERSON_SURE],
- "people_sources": ppl, "faces": r[11], "caption": r[12], "city": r[13], "byline": r[14]})
+ "people_sources": ppl, "faces": r[11], "caption": r[12], "city": r[13], "byline": r[14],
+ "headline": r[15], "keywords": r[16], "credit": r[17],
+ "original": f"/original/{r[0]}"})
  return out
 
 

@@ -19,6 +19,12 @@ Read PLAN.md first. It holds the agreed architecture, decisions, costs, phases a
 - Thumbnails are 768px (`data/thumbs/<id>.jpg`) and are what SigLIP, the VLM and the judge read; originals are only decoded once at register.
 - Caption names: `app/caption_names.py` (Luna text-only, cache data/caption_names.jsonl, alias map data/caption_persons.json). Query parse:
  `app/query_parse.py` (cache data/query_parses.jsonl; QUERY_PARSE=0 or `parse=false` disables). Results and decisions: PLAN.md section 12.
+- UI: `app/static/index.html` is the reporter-facing page (search, justified photo rows, viewer with caption/date/place/people/
+ photographer, download original, more like this). `?debug=1` shows scores, why-matched and face boxes; `/debug` is the old testing UI.
+ Originals are served by id at `/original/<id>` (the `file` column can be an absolute path outside data/, so `/media/<file>` 404s).
+- Newsroom test queries: `eval/hand_queries.txt` type `newsroom` (40), written from what reporters wrote about
+ Run just those with
+ `uv run python -m eval.run_eval --types newsroom --show-misses`.
 - Experiments: see EXPERIMENTS.md for the ground rules (own `exp/<name>/` folder, `exp_<name>_*` tables, swap `app.search.TABLES`).
 
 ## Working rules

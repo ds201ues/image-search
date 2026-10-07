@@ -2,7 +2,7 @@
 import json, time
 from pathlib import Path
 from fastapi import FastAPI, Query, Body
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from .config import DATA_DIR, THUMB_DIR, ROOT
 from .db import connect
@@ -104,6 +104,19 @@ def api_stats():
  "people": [{"id": i, "name": n, "images": c} for i, n, c in people]}
 
 
+@app.get("/original/{image_id}")
+def api_original(image_id: str):
+ """The archive file itself, for download. Paths in `images.file` may be absolute (archive dirs outside data/)."""
+ row = conn.execute("SELECT file, orig_file FROM images WHERE id = %s", (image_id,)).fetchone()
+ if not row:
+ return Response(status_code=404)
+ path = Path(row[0]) if Path(row[0]).is_absolute() else DATA_DIR / row[0]
+ if not path.exists():
+ return Response(status_code=404)
+ name = Path(row[1] or row[0]).name
+ return FileResponse(path, filename=name)
+
+
 app.mount("/thumbs", StaticFiles(directory=THUMB_DIR), name="thumbs")
 app.mount("/media", StaticFiles(directory=DATA_DIR), name="media")
 
@@ -111,3 +124,9 @@ app.mount("/media", StaticFiles(directory=DATA_DIR), name="media")
 @app.get("/")
 def index():
  return FileResponse(ROOT / "app" / "static" / "index.html")
+
+
+@app.get("/debug")
+def debug_page():
+ """The original testing UI: stage timings, scores, raw description fields."""
+ return FileResponse(ROOT / "app" / "static" / "debug.html")
