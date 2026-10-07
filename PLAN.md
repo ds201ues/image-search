@@ -397,3 +397,9 @@ food inspectors 0.5, road repair 0.55, door-to-door campaign 0.55) are "right to
 (tanker without a queue, dry field without a well). Junk is near zero, so the loss is specificity, not noise, and for several of these
 the archive sample probably holds no exact photo (pool had no fully relevant photo for the two 0.43 queries). Nothing to fix per query;
 the lever is still stage 2 (section 12 open item 2) and a bigger archive.
+
+### Latency and loader (2026-10-07)
+Uncached live query measured 1.4-1.7 s (parse time-box wait ~0.5 s because the Luna parse takes 1.6-3.4 s and rarely lands in time; Jev 0.6-1.3 s for 150 docs,
+scaling with text not call count). Product call: bad results are worse than a 0.5 s delay, so no parse removal and no Jev cuts; the UI shows a
+dotted-globe loader with stage captions instead. Dense index-time text for stage 2 (E20) tried and dropped. Jev distillation and image-aware
+refine deferred (hackathon scope).

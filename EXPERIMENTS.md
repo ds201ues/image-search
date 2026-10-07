@@ -134,3 +134,4 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  [−0.05,+0.01], known-item hit@1 0.51→0.54, never retrieved 19→24) — the eval cannot see it: 7% of photos changed and the queries come from v1 text.
  Cost $0.25/1k vs $0.20 (+27%, prompt twice as long). NOT adopted into the live index; candidate schema for the 10M backfill pending a human
  hallucination check (100-photo pool at /grade) and real-query evidence. exp/taxonomy/, app/vlm_v2.py, eval/tax_*_report.txt before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
+- E20 dense_desc (2026-10-07): literal 5-8 sentence Luna description appended to the stage-2 doc for the 3,702 newsroom candidates ($0.48). Paired on 40 newsroom queries: P@10 +0.007 [-0.011,+0.025], R@pool -0.039, top-tier recall -0.055 (leans worse). DROP. exp/dense_desc/results.md
