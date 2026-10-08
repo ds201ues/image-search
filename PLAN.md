@@ -148,7 +148,12 @@ Self-hosted Qwen3-VL 8B on a rented A100 ≈ $0.15 per 1k but ~55 GPU-days for 1
 
 ### People rules (re-tune on 50k)
 - Luna name at confidence ≥ 0.8 is kept. 0.6–0.8 is kept only if face matching agrees. Below 0.6 ignored.
- All pilot Luna errors (Tom Cruise for Charlie Sheen, Twinkle Khanna for Farah Khan, Mohammed Siraj for Prasidh Krishna) were below 0.8.
+ All pilot Luna errors (Tom Cruise for Charlie Sheen, Twinkle Khanna for Farah Khan, Mohammed Siraj for Prasidh Khan) were below 0.8.
+ **Revised 2026-10-08 (E21, 33,759 photos):** Luna's number is not calibrated at scale (Madhavan → "Sanjay Dutt 0.97"; the same
+ photo gave "Suniel Shetty 0.91" on a re-run; ~20% of Luna-only tags wrong by hand check). A Luna guess that is the ONLY evidence is
+ capped at 0.75 in the `image_person_scores` view (app/db.py): still recalled, shown as "possible" (dashed chip) until a caption,
+ face cluster or gallery match corroborates it. 1,878 of 21,008 tags affected; judged people eval flat (the judge shares Luna's errors).
+ Follow-ups: seed face references from caption-confirmed Luna guesses (film people have ~0 refs); faces-present-no-match as negative evidence.
 - Single-face photo + one Luna name at ≥ 0.9 → that face becomes a reference for the person.
 - Face match needs cosine ≥ 0.5 (AuraFace). One false positive at 0.49 in the pilot.
 - Names appear in search only via `image_persons`; names Luna leaks into tags are stripped.

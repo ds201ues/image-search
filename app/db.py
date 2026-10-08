@@ -69,9 +69,14 @@ CREATE TABLE IF NOT EXISTS image_persons ( -- who is in each image, from the VLM
 );
 CREATE INDEX IF NOT EXISTS image_persons_person ON image_persons (person_id);
 
--- combined belief that a person is in an image: noisy-OR over independent evidence
+-- combined belief that a person is in an image: noisy-OR over independent evidence.
+-- A Luna name guess ALONE is capped at 0.75 (below PERSON_SURE): its confidence is not calibrated (E21: Madhavan "Sanjay Dutt 0.97",
+-- Govinda "Sanjay Dutt 0.92"; ~20% of Luna-only tags wrong). It still counts and is recalled, but renders as "possible" until a
+-- caption, a face cluster or a gallery match corroborates it.
 CREATE OR REPLACE VIEW image_person_scores AS
-SELECT image_id, person_id, 1 - exp(sum(ln(greatest(1 - score, 1e-6)))) AS score,
+SELECT image_id, person_id,
+ CASE WHEN bool_and(source = 'vlm') THEN least(1 - exp(sum(ln(greatest(1 - score, 1e-6)))), 0.75)
+ ELSE 1 - exp(sum(ln(greatest(1 - score, 1e-6)))) END AS score,
  array_agg(source || ':' || round(score::numeric, 2) ORDER BY source) AS evidence
 FROM image_persons GROUP BY image_id, person_id;
 CREATE INDEX IF NOT EXISTS faces_person ON faces (person_id);

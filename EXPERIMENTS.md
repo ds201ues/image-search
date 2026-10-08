@@ -135,3 +135,8 @@ SigLIP alone 0.85 / 0.41. event_year recall 0.00, hinglish 0.09 (people index th
  Cost $0.25/1k vs $0.20 (+27%, prompt twice as long). NOT adopted into the live index; candidate schema for the 10M backfill pending a human
  hallucination check (100-photo pool at /grade) and real-query evidence. exp/taxonomy/, app/vlm_v2.py, eval/tax_*_report.txt before build (user call: enough experiments; conflicts with < 1 s target; judge = same model, circular).
 - E20 dense_desc (2026-10-07): literal 5-8 sentence Luna description appended to the stage-2 doc for the 3,702 newsroom candidates ($0.48). Paired on 40 newsroom queries: P@10 +0.007 [-0.011,+0.025], R@pool -0.039, top-tier recall -0.055 (leans worse). DROP. exp/dense_desc/results.md
+- E21 vlm_alone: ADOPT. A person tag whose only evidence is Luna's name guess is capped at 0.75 (renders "possible"). Trigger: Madhavan and
+ Govinda tagged Sanjay Dutt at 0.97/0.92 with no face support; Luna's confidence is uncalibrated (same photo: Suniel Shetty 0.91 on re-run).
+ 1,878/21,008 tags affected, ~20% of them wrong by hand check; of 12 demoted photos on sample queries ~8 were wrong tags. Judged people eval
+ flat (P@10 0.72→0.72, R@pool 0.85→0.85): the judge is the same model and the wrong tags are 1-2 per pool. cap45 (drop) rejected: loses recall.
+ exp/vlm_alone/results.md
