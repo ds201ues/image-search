@@ -1,0 +1,432 @@
+<title>Photo Search Pipeline</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one framed canvas (the diagram) with a control bar on top, a caption strip and stage chips below. */
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --fg:#1d2230; --muted:#6b7280; --line:#c9ccd4; --line-soft:#e4e6eb; --group:#eef0f4;
+  --accent:#2b3bd1; --drop:#d2461f; --keep:#1f8f4e; --possible:#c98b12;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#15171c; --panel:#1d2026; --fg:#e8eaf0; --muted:#9aa0ad; --line:#4a4f5c; --line-soft:#2d313a; --group:#252932;
+  --accent:#8e9bff; --drop:#ff7a52; --keep:#4fcf85; --possible:#e9b14a; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#15171c; --panel:#1d2026; --fg:#e8eaf0; --muted:#9aa0ad; --line:#4a4f5c; --line-soft:#2d313a; --group:#252932;
+  --accent:#8e9bff; --drop:#ff7a52; --keep:#4fcf85; --possible:#e9b14a; color-scheme:dark }
+
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-inline:16px;padding-block:20px 32px;margin:0}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header h1{font-size:1.25rem;font-weight:600;margin:0;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);font-size:.9rem;max-width:68ch}
+.frame{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bar .legend{margin-left:auto;display:flex;gap:14px;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+button{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:5px 11px;cursor:pointer}
+button:hover{border-color:var(--fg)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;font-family:var(--mono);font-size:.74rem;padding:5px 9px}
+.seg button[aria-pressed="true"]{background:var(--group);font-weight:500}
+.canvas{overflow-x:auto}
+svg{display:block;width:100%;min-width:720px;height:auto}
+.cap{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;border-top:1px solid var(--line-soft);padding-top:10px;min-height:3.4em}
+.cap b{font-size:.9rem;font-weight:600;white-space:nowrap}
+.cap p{margin:0;font-size:.88rem;color:var(--muted);max-width:90ch}
+.stages{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.stages button{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:.74rem;padding:4px 10px 4px 5px;border-radius:999px}
+.stages button i{font-style:normal;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--group);font-size:.68rem}
+.stages button[aria-current="step"]{border-color:var(--accent);color:var(--accent)}
+.stages button[aria-current="step"] i{background:var(--accent);color:var(--panel)}
+.stages .hint{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:4px}
+.notes{font-size:.85rem;color:var(--muted);max-width:80ch;line-height:1.5}
+.notes code{font-family:var(--mono);font-size:.8em}
+
+/* diagram */
+.edge{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;transition:stroke .3s}
+.edge.dash{stroke-dasharray:4 6;stroke-width:2}
+.edge.lit{stroke:var(--accent)}
+.edge.lit.keep{stroke:var(--keep)}
+.node circle{fill:var(--panel);stroke:var(--fg);stroke-width:2.5;transition:all .3s}
+.node.on circle{stroke:var(--accent);fill:var(--accent)}
+.node.done circle{stroke:var(--accent)}
+.node text{fill:var(--fg);font-size:14px;font-weight:600;font-family:var(--sans)}
+.node text.sub{fill:var(--muted);font-size:12px;font-weight:400}
+.node.hub circle{stroke-width:3}
+.node.hub.on circle{fill:var(--panel);stroke:var(--accent);stroke-width:4}
+.judgecap circle{fill:var(--panel)}
+.judgecap text{fill:var(--fg);font-size:15px;font-weight:600;font-family:var(--sans)}
+.node.hub.done circle{fill:var(--panel)}
+.node.hub text{font-size:14px}
+.group rect{fill:var(--group);stroke:none;rx:10}
+.group text{font-family:var(--mono);font-size:11px;fill:var(--muted);letter-spacing:.08em}
+.store rect{fill:var(--panel);stroke:var(--fg);stroke-width:2.5;rx:12}
+.store .c{font-size:13px;font-weight:600;fill:var(--fg);font-family:var(--sans)}
+.lbl{font-size:11.5px;fill:var(--muted);font-family:var(--mono)}
+.lane{font-family:var(--mono);font-size:11.5px;font-weight:500;fill:var(--fg) !important;fill:var(--muted);letter-spacing:.08em}
+.store .t{font-size:14px;font-weight:600;fill:var(--fg);font-family:var(--sans)}
+.store .r{font-size:11.5px;fill:var(--muted);font-family:var(--mono)}
+.store line{stroke:var(--line-soft);stroke-width:1.5}
+.store.on rect{stroke:var(--accent)}
+.token rect{fill:var(--accent);rx:8}
+.token text{fill:#fff;font-family:var(--mono);font-size:10px;font-weight:500}
+.token.photo rect{fill:var(--fg)}
+.token.photo text{fill:var(--bg)}
+.dot{stroke:none}
+.pulse{fill:none;stroke:var(--accent);stroke-width:2;opacity:0}
+.badge rect{fill:var(--panel);stroke:var(--drop);stroke-width:1.5;rx:9}
+.badge text{font-family:var(--mono);font-size:11px;fill:var(--drop)}
+.tier text{fill:var(--fg);font-family:var(--sans);font-size:14px;font-weight:600}
+.tier .sub{font-size:12px;font-weight:400;fill:var(--muted)}
+.human circle{fill:var(--panel);stroke:var(--fg);stroke-width:2.5;transition:stroke .3s}
+.human.on circle{stroke:var(--accent);stroke-width:3.5}
+.card > rect{fill:var(--panel);stroke:var(--fg);stroke-width:2.5}
+.card .ct{font-family:var(--mono);font-size:11px;fill:var(--muted);letter-spacing:.08em}
+.card .rt{font-family:var(--sans);font-size:13.5px;font-weight:600;fill:var(--fg)}
+.card .rs{font-weight:400;font-size:12px;fill:var(--muted)}
+.card .th{fill:var(--group);stroke:var(--line-soft);stroke-width:1;transition:fill .3s}
+.card .th.keep{fill:var(--keep)}
+.card .th.poss{fill:var(--possible)}
+.edge.dropline{stroke-dasharray:3 5}
+.edge.lit.dropline{stroke:var(--drop)}
+.edge.lit.poss{stroke:var(--possible)}
+.human path{fill:var(--fg)}
+.human text{fill:var(--fg);font-size:14px;font-weight:600;font-family:var(--sans)}
+.human text.sub{fill:var(--muted);font-size:12px;font-weight:400}
+@media (prefers-reduced-motion: reduce){ .edge,.node circle{transition:none} }
+@media (max-width:600px){ .cap{grid-template-columns:1fr} .bar .legend{margin-left:0;width:100%} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Photo Search Pipeline</h1>
+    <p>How a reporter's sentence becomes a ranked set of archive photos. Top lane: what happens once per photo. Bottom lane: what happens on every search, in under a second.</p>
+  </header>
+
+  <div class="frame">
+    <div class="bar">
+      <button id="play" class="primary" aria-label="Pause">❚❚ Pause</button>
+      <button id="restart">↻ Restart</button>
+      <div class="seg" role="group" aria-label="Speed">
+        <button data-speed="0.5" aria-pressed="false">0.5×</button>
+        <button data-speed="1" aria-pressed="true">1×</button>
+        <button data-speed="2" aria-pressed="false">2×</button>
+      </div>
+      <div class="legend">
+        <span style="--c:var(--accent)">candidate</span>
+        <span style="--c:var(--drop)">dropped</span>
+        <span style="--c:var(--possible)">possible</span>
+        <span style="--c:var(--keep)">match</span>
+      </div>
+    </div>
+
+    <div class="canvas"><svg id="d" viewBox="0 0 1260 700" role="img" aria-label="Animated diagram of the indexing and search pipeline"></svg></div>
+
+    <div class="cap"><b id="capT">Index</b><p id="capP"></p></div>
+
+    <div class="stages" id="stages"><span class="hint">Click a stage to jump to it</span></div>
+  </div>
+
+  <p class="notes">Numbers are the measured ones from PLAN.md on the 33,759-photo index: both tiers P@10 0.78, top tier 0.83, recall against the judged pool 0.87, live latency 0.8–1.7 s. Thresholds live at the top of <code>app/search.py</code>; the people rules in <code>app/ingest.py</code>.</p>
+</div>
+
+<script>
+(() => {
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("d");
+const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+
+/* ---------- geometry ----------
+   Producer / shared state / consumer: the index lane writes evidence, the search lane reads it, and the store between
+   them is the only thing they share. Labels sit ABOVE their line (right of the node) so no edge runs through text. */
+const N = {
+  photo:    { x: 60,  y: 125, label: "Photo in",        sub: "PHOTO_0812" },
+  register: { x: 200, y: 125, label: "Register",        sub: "768px thumb + IPTC" },
+  siglip:   { x: 400, y: 80,  label: "SigLIP 2",        sub: "image vector", side: 1 },
+  luna:     { x: 400, y: 125, label: "GPT-6 Luna",      sub: "description, names", side: 1 },
+  faces:    { x: 400, y: 170, label: "YuNet + AuraFace", sub: "face vectors", side: 1 },
+  bge:      { x: 560, y: 125, label: "bge-small",       sub: "description vector", side: 1 },
+  clusters: { x: 600, y: 170, label: "Face clusters",   sub: "union-find" },
+  votes:    { x: 730, y: 170, label: "Cluster votes",   sub: "leave-one-out" },
+  belief:   { x: 860, y: 170, label: "People belief",   sub: "noisy-OR" },
+
+  query:    { x: 80,  y: 475, label: "Query in",        sub: "“mamata at a rally”" },
+  parse:    { x: 215, y: 430, label: "Parse",           sub: "Luna · names, years, facets", above: true },
+  link:     { x: 215, y: 520, label: "Link people",     sub: "directory + aliases" },
+  rVec:     { x: 400, y: 388, label: "SigLIP",          sub: "text → image vectors", side: 1 },
+  rDesc:    { x: 400, y: 430, label: "Description",     sub: "meaning vectors", side: 1 },
+  rText:    { x: 400, y: 472, label: "Full-text",       sub: "captions, cities", side: 1 },
+  rRare:    { x: 400, y: 514, label: "Rare words",      sub: "all must match", side: 1 },
+  rConcept: { x: 400, y: 556, label: "Concept labels",  sub: "event, setting, roles", side: 1 },
+  rPeople:  { x: 400, y: 598, label: "People",          sub: "photos of the person", side: 1 },
+  fuse:     { x: 630, y: 475, label: "Fuse",            sub: "RRF · cap 150" },
+  judge:    { x: 790, y: 475, label: "Judge",           sub: "", hub: true },
+  rank:     { x: 945, y: 475, label: "Relevance",       sub: "context × person", above: true },
+};
+const RECALL = ["rVec","rDesc","rText","rRare","rConcept","rPeople"];
+const BAND = { x: 330, y: 252, w: 870, h: 58 };
+const CARD = { x: 1040, y: 392, w: 205, h: 168 };   // results page: both tiers, best matches first
+const HUMAN = { x: 1062, y: 650 };
+const BUS = 1000;
+
+const E = {
+  photoReg:   [[60,125],[200,125]],
+  regSig:     [[200,125],[270,125],[300,80],[400,80]],
+  regLuna:    [[200,125],[400,125]],
+  regFaces:   [[200,125],[270,125],[300,170],[400,170]],
+  lunaBge:    [[400,125],[560,125]],
+  faceClu:    [[400,170],[600,170]],
+  cluVotes:   [[600,170],[730,170]],
+  votesBel:   [[730,170],[860,170]],
+  lunaNames:  [[730,125],[730,161]],
+  sigBus:     [[400,80],[BUS,80]],
+  bgeBus:     [[560,125],[BUS,125]],
+  belBus:     [[860,170],[BUS,170]],
+  bus:        [[BUS,80],[BUS,250]],
+  storeRecall:[[452,310],[452,338]],
+
+  qParse:     [[80,475],[150,475],[180,430],[215,430]],
+  qLink:      [[80,475],[150,475],[180,520],[215,520]],
+  parseR:     [[215,430],[285,430],[315,475],[362,475]],
+  linkR:      [[215,520],[285,520],[315,475],[362,475]],
+  fanOut:     [[362,388],[362,598]],
+  fuseJudge:  [[630,475],[790,475]],
+  judgeRank:  [[790,475],[945,475]],
+  rankMatch:  [[945,475],[985,475],[1012,453],[1040,453]],
+  rankPoss:   [[945,475],[985,475],[1012,515],[1040,515]],
+  rankDrop:   [[985,475],[985,592]],
+  tiersHuman: [[1062,560],[1062,633]],
+};
+for (const k of RECALL) { E[k + "S"] = [[362, N[k].y], [N[k].x, N[k].y]]; E[k + "F"] = [[N[k].x, N[k].y], [545, N[k].y], [590, 475], [630, 475]]; }
+const INDEX_EDGES = ["photoReg","regSig","regLuna","regFaces","lunaBge","faceClu","cluVotes","votesBel","lunaNames","sigBus","bgeBus","belBus","bus"];
+
+/* ---------- draw ---------- */
+const defs = el("defs");
+const mk = el("marker", { id: "arr", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+el("path", { d: "M0 0 L10 5 L0 10 z", fill: "var(--line)" }, mk);
+
+const groups = [
+  { x: 548, y: 150, w: 370, h: 70, t: "CORPUS JOBS · rerun after each ingest", ty: 236 },
+  { x: 340, y: 340, w: 220, h: 290, t: "RECALL · ~50 candidates each", ty: 622 },
+];
+for (const g of groups) { const G = el("g", { class: "group" }); el("rect", { x: g.x, y: g.y, width: g.w, height: g.h }, G); el("text", { x: g.x + 10, y: g.ty }, G).textContent = g.t; }
+// the recall label is the only one drawn inside its box, at the bottom; move it above the box bottom edge
+const edges = {};
+for (const k in E) edges[k] = el("path", { class: "edge", d: "M" + E[k].map(p => p.join(" ")).join(" L") });
+edges.lunaNames.classList.add("dash");
+edges.bus.setAttribute("marker-end", "url(#arr)");
+edges.storeRecall.setAttribute("marker-end", "url(#arr)");
+el("text", { x: BUS + 10, y: 236, class: "lbl" }).textContent = "writes";
+el("text", { x: 462, y: 330, class: "lbl" }).textContent = "reads";
+el("text", { x: 737, y: 147, class: "lbl" }).textContent = "names";
+
+const nodes = {};
+for (const k in N) {
+  const n = N[k], G = el("g", { class: "node" + (n.hub ? " hub" : "") });
+  el("circle", { cx: n.x, cy: n.y, r: n.hub ? 34 : 9 }, G);
+  if (n.hub) el("circle", { class: "pulse", cx: n.x, cy: n.y, r: 34 }, G);
+  else {
+    const anchor = n.side ? "start" : "middle", tx = n.side ? n.x + 14 : n.x;
+    const ty = n.side ? n.y - 22 : n.above ? n.y - 30 : n.y + 26;
+    el("text", { x: tx, y: ty, "text-anchor": anchor }, G).textContent = n.label;
+    el("text", { class: "sub", x: tx, y: ty + 13, "text-anchor": anchor }, G).textContent = n.sub;
+  }
+  nodes[k] = G;
+}
+// judge spokes: what Jev reads for each candidate
+const spokes = [["query", -62, -40],["caption", 62, -40],["description", 62, 40],["people", -62, 40]];
+for (const [t, dx, dy] of spokes) {
+  const x = N.judge.x + dx, y = N.judge.y + dy;
+  el("line", { x1: N.judge.x + dx * 0.6, y1: N.judge.y + dy * 0.6, x2: x, y2: y, class: "edge", style: "stroke-width:1.5" });
+  el("text", { x: x + (dx > 0 ? 6 : -6), y: y + (dy > 0 ? 10 : 0), "text-anchor": dx > 0 ? "start" : "end", class: "lbl" }).textContent = t;
+}
+el("text", { x: N.judge.x, y: N.judge.y + 82, "text-anchor": "middle", class: "lbl" }).textContent = "Jev · 50 photos per call · P(context) 0..1";
+
+// store layer between the lanes
+const storeG = el("g", { class: "store" });
+el("rect", { x: BAND.x, y: BAND.y, width: BAND.w, height: BAND.h }, storeG);
+el("text", { class: "t", x: 20, y: BAND.y + 26 }, storeG).textContent = "Postgres + pgvector";
+el("text", { class: "r", x: 20, y: BAND.y + 43 }, storeG).textContent = "one box, one service";
+[["image vectors", "SigLIP 2"], ["description vectors", "bge-small"], ["captions, text, labels", "IPTC + Luna"], ["people scores, faces", "corpus jobs"]].forEach(([t, w], i) => {
+  const cw = BAND.w / 4, x = BAND.x + 18 + i * cw;
+  if (i) el("line", { x1: x - 18, y1: BAND.y + 12, x2: x - 18, y2: BAND.y + BAND.h - 12 }, storeG);
+  el("text", { class: "c", x, y: BAND.y + 26 }, storeG).textContent = t;
+  el("text", { class: "r", x, y: BAND.y + 43 }, storeG).textContent = "from " + w;
+});
+
+// results page: one card, two tiers, the only thing the reporter sees
+const cardG = el("g", { class: "card" });
+el("rect", { x: CARD.x, y: CARD.y, width: CARD.w, height: CARD.h, rx: 12 }, cardG);
+el("text", { class: "ct", x: CARD.x + 14, y: CARD.y + 21 }, cardG).textContent = "RESULTS PAGE";
+const thumbs = { keep: [], poss: [] };
+[["keep", "Best matches", "≥ 0.5", 453], ["poss", "Also consider", "≥ 0.1", 515]].forEach(([k, t, th, y]) => {
+  const l = el("text", { class: "rt", x: CARD.x + 14, y: y - 15 }, cardG); l.textContent = t;
+  const m = el("tspan", { class: "rs", dx: 6 }, l); m.textContent = th;
+  for (let i = 0; i < 4; i++) thumbs[k].push(el("rect", { class: "th", x: CARD.x + 14 + i * 46, y: y - 7, width: 40, height: 26, rx: 4 }, cardG));
+});
+edges.rankDrop.classList.add("dropline");
+el("text", { x: 985, y: 612, "text-anchor": "middle", class: "lbl", style: "fill:var(--drop)" }).textContent = "< 0.1 hidden";
+
+// human
+const H = el("g", { class: "human" });
+el("circle", { cx: HUMAN.x, cy: HUMAN.y, r: 15 }, H);
+el("path", { d: `M${HUMAN.x} ${HUMAN.y - 7} a4.5 4.5 0 1 1 0 9 a4.5 4.5 0 1 1 0 -9 M${HUMAN.x - 8} ${HUMAN.y + 11} q8 -9 16 0 z` }, H);
+el("text", { x: HUMAN.x + 24, y: HUMAN.y + 1 }, H).textContent = "Reporter";
+el("text", { class: "sub", x: HUMAN.x + 24, y: HUMAN.y + 14 }, H).textContent = "downloads the original";
+
+// lane labels, kept in the left column so they never cross a group
+el("text", { x: 20, y: 30, class: "lane" }).textContent = "INDEX · AT INGEST";
+el("text", { x: 20, y: 47, class: "lbl" }).textContent = "store evidence, decide nothing";
+el("text", { x: 20, y: 340, class: "lane" }).textContent = "SEARCH · EVERY QUERY";
+el("text", { x: 20, y: 356, class: "lbl" }).textContent = "retrieve generously, judge precisely";
+// parse time box
+const tb = el("g", { class: "badge" });
+el("rect", { x: 157, y: 364, width: 116, height: 20 }, tb);
+el("text", { x: 215, y: 379, "text-anchor": "middle" }, tb).textContent = "700 ms time box";
+
+const layer = el("g"); // tokens on top
+const judgeCap = el("g", { class: "judgecap" });
+el("circle", { cx: N.judge.x, cy: N.judge.y, r: 26 }, judgeCap);
+el("text", { x: N.judge.x, y: N.judge.y + 5, "text-anchor": "middle" }, judgeCap).textContent = "Judge";
+
+/* ---------- animation core ---------- */
+let gen = 0, playing = true, speed = 1, stage = 0;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const frame = () => new Promise(r => requestAnimationFrame(r));
+async function tick(ms, g, onT) {
+  let t = 0, last = performance.now();
+  while (t < ms) {
+    const now = await frame(); if (g !== gen) throw "abort";
+    if (playing) t += (now - last) * speed * (reduce ? 4 : 1);
+    last = now; onT && onT(Math.min(t / ms, 1));
+  }
+  onT && onT(1);
+}
+const lerpPath = (pts, u) => {
+  const segs = []; let L = 0;
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]); segs.push(d); L += d; }
+  let s = u * L;
+  for (let i = 0; i < segs.length; i++) { if (s <= segs[i] || i === segs.length - 1) { const f = segs[i] ? Math.min(s / segs[i], 1) : 1; return [pts[i][0] + (pts[i+1][0] - pts[i][0]) * f, pts[i][1] + (pts[i+1][1] - pts[i][1]) * f]; } s -= segs[i]; }
+  return pts[pts.length - 1];
+};
+const place = (t, [x, y]) => t.setAttribute("transform", `translate(${x} ${y})`);
+async function move(t, pts, ms, g, edgeKey) { await tick(ms, g, u => place(t, lerpPath(pts, u))); if (edgeKey) edges[edgeKey].classList.add("lit"); }
+function token(text, cls = "") {
+  const t = el("g", { class: "token " + cls }, layer); const w = text.length * 6.4 + 14;
+  el("rect", { x: -w / 2, y: -9, width: w, height: 18 }, t); el("text", { x: 0, y: 4, "text-anchor": "middle" }, t).textContent = text; return t;
+}
+const dot = (c) => { const d = el("circle", { class: "dot", r: 5, fill: c }, layer); return d; };
+const on = (...ks) => ks.forEach(k => { nodes[k].classList.remove("done"); nodes[k].classList.add("on"); });
+const done = (...ks) => ks.forEach(k => { nodes[k].classList.remove("on"); nodes[k].classList.add("done"); });
+const cap = (t, p) => { document.getElementById("capT").textContent = t; document.getElementById("capP").textContent = p; };
+async function pulse(g) { const p = nodes.judge.querySelector(".pulse"); await tick(700, g, u => { p.setAttribute("r", 34 + u * 26); p.style.opacity = 1 - u; }); p.style.opacity = 0; }
+function reset() {
+  layer.replaceChildren(); storeG.classList.remove("on");
+  for (const k in edges) edges[k].classList.remove("lit", "keep");
+  for (const k in nodes) nodes[k].classList.remove("on", "done");
+  for (const t of [...thumbs.keep, ...thumbs.poss]) t.classList.remove("keep", "poss");
+  H.classList.remove("on");
+}
+
+/* ---------- scenes ---------- */
+const scenes = [
+  { t: "Index", run: async g => {
+    cap("Index", "Each archive photo is read once. A 768px thumbnail is made and the IPTC caption, headline, date and city come along as evidence. Dates only ever come from metadata, never from a model.");
+    const p = token("PHOTO_0812", "photo"); place(p, E.photoReg[0]); on("photo");
+    await move(p, E.photoReg, 900, g, "photoReg"); done("photo"); on("register"); await tick(500, g);
+    cap("Index", "Three models read the thumbnail in parallel. SigLIP 2 records how it looks, GPT-6 Luna writes a description and guesses names, and a face model embeds every face. Luna's description is embedded again with bge-small for meaning search.");
+    const a = token("vector", "photo"), b = token("description", "photo"), c = token("faces", "photo"); [a, b, c].forEach(x => place(x, E.regLuna[0])); p.remove();
+    await Promise.all([move(a, E.regSig, 800, g, "regSig"), move(b, E.regLuna, 800, g, "regLuna"), move(c, E.regFaces, 800, g, "regFaces")]);
+    done("register"); on("siglip", "luna", "faces"); await tick(500, g);
+    await move(b, E.lunaBge, 600, g, "lunaBge"); done("luna"); on("bge"); await tick(300, g);
+    cap("Index", "Corpus jobs re-run after every ingest. Faces are clustered across the archive. Each cluster is named by what the OTHER photos in it say (Luna guesses and caption names), so a guess never confirms itself. The result is a stored belief P(person in photo), not a yes or no.");
+    await move(c, E.faceClu, 600, g, "faceClu"); done("faces"); on("clusters");
+    await move(c, E.cluVotes, 600, g, "cluVotes"); edges.lunaNames.classList.add("lit"); done("clusters"); on("votes");
+    await move(c, E.votesBel, 600, g, "votesBel"); done("votes"); on("belief"); await tick(400, g);
+    cap("Index", "Everything lands in one Postgres + pgvector store. Nothing is decided at index time; the store keeps evidence for the search lane to weigh.");
+    await Promise.all([move(a, E.sigBus, 900, g, "sigBus"), move(b, E.bgeBus, 900, g, "bgeBus"), move(c, E.belBus, 900, g, "belBus")]);
+    done("siglip", "bge", "belief"); [a, b, c].forEach(x => x.remove());
+    const w = token("evidence", "photo"); place(w, E.bus[0]); await move(w, E.bus, 700, g, "bus"); w.remove();
+    storeG.classList.add("on"); await tick(900, g);
+  }},
+  { t: "Understand", run: async g => {
+    cap("Understand", "A reporter types a sentence. Luna parses it for names, years, concept facets and an English rewrite of Hinglish. It runs alongside a first recall pass with a 700 ms time box, so a slow parse never blocks the search. Names are linked against the people directory. Ordinary words never link to a person.");
+    const q = token("mamata banerjee at a rally"); place(q, E.qParse[0]); on("query"); await tick(500, g);
+    const q2 = token("names · years"); place(q2, E.qParse[0]);
+    await Promise.all([move(q, E.qParse, 800, g, "qParse"), move(q2, E.qLink, 800, g, "qLink")]); done("query"); on("parse", "link"); q2.remove(); await tick(700, g);
+    cap("Understand", "Out of the parse: the linked person (Mamata Banerjee, p = 0.9) and the context the photo must satisfy (“at a rally”). The person is REQUIRED only because the parse named her.");
+    await tick(900, g); q.remove();
+  }},
+  { t: "Recall", run: async g => {
+    cap("Recall", "Six cheap retrievers read the store, about 50 candidates each: image vectors, description vectors, full-text over captions, a rare-word pass for specific names, concept labels (event, setting, roles) and every photo of the linked person. Recall is generous on purpose; precision comes next.");
+    const ks = RECALL;
+    const t1 = token("context"), t2 = token("person"); place(t1, E.parseR[0]); place(t2, E.linkR[0]);
+    await Promise.all([move(t1, E.parseR, 700, g, "parseR"), move(t2, E.linkR, 700, g, "linkR")]); done("parse", "link"); t1.remove(); t2.remove();
+    edges.storeRecall.classList.add("lit"); edges.fanOut.classList.add("lit"); ks.forEach(k => edges[k + "S"].classList.add("lit")); on(...ks); await tick(600, g);
+    const cands = [];
+    for (let r = 0; r < 4; r++) {
+      const batch = ks.map((k, i) => { const d = dot("var(--accent)"); place(d, N[k] && [N[k].x, N[k].y]); cands.push(d); return move(d, E[k + "F"], 900, g, k + "F"); });
+      await Promise.all([Promise.all(batch), tick(350, g)]);
+    }
+    done(...ks); return cands;
+  }},
+  { t: "Fuse", run: async g => {
+    cap("Fuse", "Reciprocal rank fusion merges the six lists into one, capped at 150 for latency. Photos that carry the required person are never cut by the cap. No scores are compared across retrievers; only ranks are.");
+    on("fuse"); const ds = [...layer.querySelectorAll(".dot")]; await tick(1200, g);
+    for (let i = 0; i < ds.length; i++) { if (i % 2) { ds[i].remove(); } }
+    await tick(400, g); done("fuse");
+  }},
+  { t: "Judge", run: async g => {
+    cap("Judge", "Stage 2. The Jev decision model reads the query together with each candidate's caption, Luna description and the people the index believes are in it, 50 photos per call, and returns a calibrated P(context) from 0 to 1. Who and what are judged together.");
+    const ds = [...layer.querySelectorAll(".dot")]; on("judge");
+    await Promise.all(ds.map((d, i) => move(d, E.fuseJudge, 800 + i * 60, g, "fuseJudge")));
+    await pulse(g); await tick(300, g); await pulse(g);
+    cap("Judge", "Most candidates score near zero and are dropped: a crowd scene without her, a portrait of her in an office. The few that satisfy both the person and the context score 0.9 or above.");
+    const fates = ["drop","drop","keep","drop","poss","drop","keep","drop","drop","poss"];
+    await Promise.all(ds.map((d, i) => { const f = fates[i % fates.length]; d.setAttribute("fill", f === "drop" ? "var(--drop)" : f === "keep" ? "var(--keep)" : "var(--possible)"); d.dataset.f = f; return move(d, E.judgeRank, 900 + i * 50, g, "judgeRank"); }));
+    done("judge");
+  }},
+  { t: "Show", run: async g => {
+    cap("Rank and show", "relevance = P(context) × P(the required person is in the photo). One threshold pass sorts every candidate: 0.5 and above goes to Best matches, 0.1 to 0.5 to Also consider, and below 0.1 is hidden. Two tiers keep the top clean while a query is rarely empty.");
+    on("rank"); const ds = [...layer.querySelectorAll(".dot")]; await tick(700, g);
+    const slot = { keep: 0, poss: 0 };
+    await Promise.all(ds.map((d, i) => {
+      const f = d.dataset.f;
+      if (f === "drop") return move(d, [[945,475],[985,475],[985,592]], 800 + i * 50, g, "rankDrop").then(() => tick(300, g, u => d.style.opacity = 1 - u)).then(() => d.remove());
+      const key = f === "keep" ? "keep" : "poss";
+      return move(d, key === "keep" ? E.rankMatch : E.rankPoss, 900 + i * 60, g, key === "keep" ? "rankMatch" : "rankPoss").then(() => {
+        d.remove(); const t = thumbs[key][slot[key]++ % 4]; t.classList.add(key);
+      });
+    }));
+    edges.rankMatch.classList.add("keep"); edges.rankPoss.classList.add("poss"); done("rank");
+    thumbs.keep.forEach(t => t.classList.add("keep")); thumbs.poss.forEach(t => t.classList.add("poss"));
+    await tick(700, g);
+    cap("Rank and show", "Both tiers reach the reporter on one page, best matches first. They open a photo to read the caption, date, place, photographer and people, then download the original. Measured on 33,759 photos: top-tier P@10 0.83, live latency 0.8–1.7 s.");
+    const r = dot("var(--accent)"); place(r, E.tiersHuman[0]); await move(r, E.tiersHuman, 700, g, "tiersHuman"); r.remove();
+    H.classList.add("on"); await tick(3000, g);
+  }},
+];
+
+/* ---------- controls ---------- */
+const stagesEl = document.getElementById("stages"), hint = stagesEl.querySelector(".hint");
+scenes.forEach((s, i) => { const b = document.createElement("button"); b.innerHTML = `<i>${i + 1}</i>${s.t}`; b.addEventListener("click", () => run(i)); stagesEl.insertBefore(b, hint); });
+function setStage(i) { stage = i; [...stagesEl.querySelectorAll("button")].forEach((b, j) => j === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")); }
+async function run(from) {
+  const g = ++gen; reset();
+  // when jumping past Index, leave the store lit so the search lane has something to read
+  if (from > 0) { storeG.classList.add("on"); for (const k of INDEX_EDGES) edges[k].classList.add("lit"); }
+  if (from >= 3) { done("query","parse","link",...RECALL); for (const k of ["storeRecall","fanOut","qParse","qLink","parseR","linkR",...RECALL.map(k => k + "S")]) edges[k].classList.add("lit"); for (let i = 0; i < 12; i++) { const d = dot("var(--accent)"); place(d, [630, 475]); } }
+  if (from >= 5) { [...layer.querySelectorAll(".dot")].forEach((d, i) => { const f = ["drop","drop","keep","drop","poss"][i % 5]; d.dataset.f = f; d.setAttribute("fill", f === "drop" ? "var(--drop)" : f === "keep" ? "var(--keep)" : "var(--possible)"); place(d, [945, 475]); }); }
+  try {
+    for (let i = from; i < scenes.length; i++) { setStage(i); await scenes[i].run(g); }
+    await tick(1500, g); if (g === gen) run(0);
+  } catch (e) { if (e !== "abort") console.error(e); }
+}
+const playBtn = document.getElementById("play");
+playBtn.addEventListener("click", () => { playing = !playing; playBtn.textContent = playing ? "❚❚ Pause" : "▶ Play"; playBtn.setAttribute("aria-label", playing ? "Pause" : "Play"); });
+document.getElementById("restart").addEventListener("click", () => { playing = true; playBtn.textContent = "❚❚ Pause"; run(0); });
+document.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => { speed = +b.dataset.speed; document.querySelectorAll("[data-speed]").forEach(x => x.setAttribute("aria-pressed", x === b)); }));
+run(0);
+})();
+</script>
